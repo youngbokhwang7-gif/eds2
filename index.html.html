@@ -1,0 +1,2931 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="빌드온">
+<meta name="theme-color" content="#0f1729">
+<title>빌드온 — 발주·납기 추적</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%233b82f6'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
+
+<!-- ========================================================= -->
+<!-- 🔥 FIREBASE 설정 (여기에 본인 키를 붙여넣으면 클라우드 연동됨) -->
+<!--    키가 비어있으면 이 기기에만 저장(localStorage)됩니다.       -->
+<!-- ========================================================= -->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAFLRHhZi3wG0EhLCANyEuUlBev3VwIIIQ",
+  authDomain: "jajaecall.firebaseapp.com",
+  projectId: "jajaecall",
+  storageBucket: "jajaecall.firebasestorage.app",
+  messagingSenderId: "653879056602",
+  appId: "1:653879056602:web:46df8d0cc69ae0e1dfade3"
+};
+/* ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+   ★  고객사 코드 — 여기 한 줄만 바꿔서 배포하세요         ★
+   ★  같은 코드를 쓰는 사람끼리만 데이터를 공유합니다.        ★
+   ★  코드가 다르면 데이터가 완전히 분리됩니다 (서로 안 보임). ★
+   ★                                                          ★
+   ★  예시)                                                   ★
+   ★    블루인슈텍  →  "blueinsutec"                          ★
+   ★    대성하드웨어 →  "daesung"                             ★
+   ★    한성석고    →  "hansung"                             ★
+   ★                                                          ★
+   ★  ※ 영문 소문자/숫자만, 띄어쓰기·한글 금지                ★
+   ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ */
+const TEAM_CODE = "eos";
+
+const CLIENT_NAME = "이오스종합건설";   // 화면 표시용 회사 이름 (자유롭게)
+</script>
+
+<style>
+  :root{
+    --bg:#0f1729; --bg2:#0a1020; --card:#172238; --card2:#1e2c46;
+    --line:#243352; --txt:#eaf1fb; --sub:#7d92b5;
+    --amber:#3b82f6; --amber-d:#2563eb;
+    --accent:#f5a623;
+    --green:#34d399; --red:#f87171; --blue:#5fa8ff; --purple:#a78bfa;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:var(--bg);color:var(--txt);overscroll-behavior:none;
+  }
+  #app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg);position:relative;}
+
+  /* 헤더 */
+  header{background:var(--bg2);padding:14px 16px 0;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:100;}
+  .brand{display:flex;align-items:center;gap:9px;margin-bottom:12px;}
+  .brand .logo{width:32px;height:32px;border-radius:9px;background:var(--amber);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(59,130,246,.35);}
+  .brand h1{font-size:19px;margin:0;font-weight:800;letter-spacing:-.5px;}
+  .brand .who{font-size:11px;color:var(--sub);margin-left:auto;font-weight:600;text-align:right;line-height:1.4;}
+  .brand .who b{color:var(--amber);display:block;}
+
+  .role-tabs{display:flex;gap:8px;padding:10px 12px 4px;}
+  .role-tab{flex:1;text-align:center;padding:11px 0;font-size:16px;font-weight:800;color:var(--accent);border:2px solid var(--accent);border-radius:12px;cursor:pointer;transition:.15s;background:transparent;}
+  .role-tab.on{color:#fff;background:var(--amber);border-color:var(--accent);}
+  .role-tab.gear{color:var(--accent);border-color:var(--accent);flex:0 0 auto;}
+  .role-tab.gear:active{background:var(--amber);color:#fff;}
+
+  main{flex:1;padding:16px 16px 90px;}
+  .screen{display:none;}
+  .screen.on{display:block;}
+
+  /* 공통 카드 */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;}
+  .sec-title{font-size:13px;font-weight:800;color:var(--sub);margin:18px 2px 10px;letter-spacing:.3px;}
+  .sec-title:first-child{margin-top:0;}
+
+  /* 현장 선택 칩 */
+  .site-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-bottom:4px;padding-bottom:2px;}
+  .site-row::-webkit-scrollbar{display:none;}
+  .site-chip{flex-shrink:0;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 14px;font-size:13px;font-weight:700;color:var(--sub);cursor:pointer;white-space:nowrap;transition:.15s;}
+  .site-chip.on{background:var(--amber);color:#fff;border-color:var(--amber);}
+  .site-chip.add{color:var(--amber);border-style:dashed;}
+
+  /* 요약 통계 */
+  .summary{display:flex;gap:8px;margin-bottom:14px;}
+  .sm{flex:1;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 8px;text-align:center;cursor:pointer;transition:.15s;}
+  .sm:active{transform:scale(.96);}
+  .sm.sel{border-color:var(--amber);background:#22324f;}
+  .sm .n{font-size:20px;font-weight:800;}
+  .sm.wait .n{color:var(--accent);}
+  .sm.soon .n{color:var(--blue);}
+  .sm.done .n{color:var(--green);}
+  .sm .l{font-size:10.5px;color:var(--sub);margin-top:3px;}
+
+  /* 발주 등록 폼 */
+  .field{margin-bottom:11px;}
+  .field label{display:block;font-size:12px;color:var(--sub);font-weight:700;margin-bottom:6px;}
+  .field input,.field select,.field textarea{
+    width:100%;background:var(--card2);border:1px solid var(--line);border-radius:11px;
+    padding:13px;font-size:15px;color:var(--txt);font-family:inherit;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--amber);}
+  .field .row2{display:flex;gap:8px;}
+  .field .row2>*{flex:1;}
+  #logModal .field.row3{display:flex;gap:7px;}
+  #logModal .field.row3>div{flex:1;min-width:0;}
+  /* 일지 상단 현장 날짜 표시 */
+  .site-dates{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+  .site-dates .sd{flex:1;min-width:88px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:6px 8px;text-align:center;}
+  .site-dates .sd .sd-l{font-size:9.5px;color:var(--sub);font-weight:800;margin-bottom:2px;}
+  .site-dates .sd .sd-v{font-size:11px;color:var(--txt);font-weight:700;}
+  .site-dates .sd.start .sd-v{color:var(--green);}
+  .site-dates .sd.special .sd-v{color:var(--accent);}
+  .site-dates .sd.end .sd-v{color:var(--blue);}
+  .site-dates .sd-hint{flex-basis:100%;font-size:10.5px;color:var(--sub);text-align:center;margin-top:2px;}
+  .site-dates.empty{display:none;}
+  /* 현장명·소장 바 */
+  .site-info-bar{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:9px;}
+  .site-info-bar .sib-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .site-info-bar .sib-row{display:flex;align-items:center;gap:7px;}
+  .site-info-bar .sib-l{font-size:10px;color:var(--sub);font-weight:800;width:30px;flex:0 0 auto;}
+  .site-info-bar .sib-v{font-size:13px;color:var(--txt);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .site-info-bar #lgSiteName{color:var(--amber);font-weight:800;}
+  .site-info-bar .sib-edit{flex:0 0 auto;background:var(--card2);border:1.5px solid var(--accent);border-radius:8px;padding:6px 9px;color:var(--accent);font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;}
+  .site-info-bar .sib-edit:active{background:var(--accent);color:#231400;}
+  .mat-add{display:flex;gap:8px;}
+  .mat-add input{flex:1;}
+  .mini-btn{background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:0 16px;color:var(--amber);font-weight:800;font-size:14px;cursor:pointer;white-space:nowrap;}
+
+  .domyeon-btn{
+    width:100%;background:linear-gradient(135deg,#2a2350,#1e2545);border:1px solid var(--purple);
+    border-radius:10px;padding:8px;color:#c4b5ff;font-size:12px;font-weight:700;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:11px;
+  }
+
+  .btn{width:100%;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s;}
+  .btn-primary{background:var(--amber);color:#fff;box-shadow:0 4px 16px rgba(59,130,246,.3);}
+  .btn-primary:active{background:var(--amber-d);}
+  .btn-sm{padding:11px;font-size:13px;border-radius:10px;}
+  .btn-ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line);}
+  .btn-green{background:var(--green);color:#04130d;}
+
+  /* 발주 아이템 */
+  .order{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px;position:relative;overflow:hidden;}
+  .order::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+  .order.st-wait::before{background:var(--accent);}
+  .order.st-confirmed::before{background:var(--blue);}
+  .order.st-done::before{background:var(--green);}
+  .order-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;}
+  .order-mat{font-size:15px;font-weight:800;flex:1;}
+  .order-mat small{display:block;color:var(--sub);font-weight:600;font-size:12px;margin-top:2px;}
+  .stt{font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:7px;white-space:nowrap;flex-shrink:0;}
+  .stt.wait{background:#3d3115;color:var(--accent);}
+  .stt.confirmed{background:#16304a;color:var(--blue);}
+  .stt.done{background:#143020;color:var(--green);}
+  .order-info{display:flex;gap:14px;font-size:12px;color:var(--sub);border-top:1px solid var(--line);padding-top:9px;margin-top:2px;}
+  .order-info b{color:var(--txt);font-weight:700;}
+  .order-info .date b{color:var(--blue);}
+  .order-site{font-size:11px;color:var(--purple);font-weight:700;margin-top:6px;}
+  .order-actions{display:flex;gap:8px;margin-top:10px;border-top:1px solid var(--line);padding-top:10px;}
+  .oa-btn{flex:1;border-radius:9px;padding:9px 0;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--card2);transition:.12s;}
+  .oa-btn.edit{color:var(--blue);}
+  .oa-btn.del{color:var(--red);}
+  .oa-btn.del.confirm{background:var(--red);color:#fff;border-color:var(--red);}
+  .oa-btn:active{transform:scale(.97);}
+
+  /* 캘린더 */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .cal-head .mn{font-size:16px;font-weight:800;}
+  .cal-nav{display:flex;gap:6px;}
+  .cal-nav button{width:34px;height:34px;border-radius:9px;background:var(--card2);border:1px solid var(--line);color:var(--txt);font-size:16px;cursor:pointer;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+  .cal-dow{text-align:center;font-size:11px;color:var(--sub);font-weight:700;padding:3px 0;}
+  .cal-dow.sun{color:var(--red);}.cal-dow.sat{color:var(--blue);}
+  .cal-cell{height:70px;background:var(--card2);border:1px solid transparent;border-radius:8px;padding:4px 0 3px;font-size:12px;position:relative;cursor:pointer;transition:.1s;display:flex;flex-direction:column;overflow:hidden;}
+  .cal-cell .dnum{font-weight:700;color:var(--sub);padding-left:4px;}
+  .cal-cell.empty{background:transparent;border:none;cursor:default;}
+  .cal-cell.today{border-color:var(--amber);}
+  .cal-cell.has .dnum{color:var(--txt);}
+  .cal-dots{display:flex;flex-wrap:wrap;gap:2px;margin-top:auto;padding:0 4px;}
+  .dot{width:6px;height:6px;border-radius:50%;}
+  .dot.confirmed{background:var(--blue);}.dot.done{background:var(--green);}.dot.wait{background:var(--accent);}
+  .dot.sched{background:var(--purple);}
+  .dot.log{background:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+  /* 공정 막대 (여러 날 이어지는 띠) */
+  .cal-bars{display:flex;flex-direction:column;gap:2px;margin-top:3px;}
+  .cbar{height:13px;display:flex;align-items:center;font-size:9px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;line-height:1;}
+  .cbar.s{margin-left:2px;border-top-left-radius:5px;border-bottom-left-radius:5px;padding-left:4px;}
+  .cbar.e{margin-right:2px;border-top-right-radius:5px;border-bottom-right-radius:5px;}
+  /* 공정 캘린더는 막대가 많아 셀을 더 높게 */
+  #gcalGrid .cal-cell{height:88px;}
+  /* 접기/펼치기 토글 */
+  .collapse-btn{width:100%;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;color:var(--txt);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;}
+  .collapse-btn .arr{margin-left:auto;color:var(--sub);font-size:13px;transition:.2s;}
+  .collapse-btn.open .arr{transform:rotate(180deg);}
+  .collapse-btn .cnt{font-size:11px;color:var(--sub);font-weight:700;background:var(--card2);border-radius:7px;padding:2px 8px;}
+  .collapse-body{display:none;margin-bottom:12px;}
+  .collapse-body.open{display:block;}
+  /* 세부공정표(범례) 리스트 */
+  .leg-list{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;max-height:50vh;overflow-y:auto;}
+  .leg-item{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--txt);font-weight:600;cursor:pointer;}
+  .leg-item:last-child{border-bottom:none;}
+  .leg-item .sw{width:16px;height:9px;border-radius:3px;flex:0 0 auto;}
+  .leg-item .dt{margin-left:auto;font-size:11px;color:var(--sub);font-weight:700;}
+  .cal-cell.sel{background:#22324f;border-color:var(--amber);}
+  .cal-legend{display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:11px;color:var(--sub);flex-wrap:wrap;}
+  .cal-legend span{display:flex;align-items:center;gap:4px;}
+
+  /* 출근·퇴근·일지·일정 (동일 크기 4개) */
+  .commute{display:flex;gap:6px;margin-bottom:12px;}
+  .cm-btn{flex:1;min-width:0;border-radius:11px;padding:8px 0;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:.15s;border:2px solid;line-height:1.1;}
+  .cm-btn .ic{font-size:16px;}
+  .cm-btn .tm{font-size:10px;font-weight:700;opacity:.85;min-height:12px;}
+  .cm-in{background:transparent;border-color:var(--green);color:var(--green);}
+  .cm-in.done{background:var(--green);color:#04130d;}
+  .cm-out{background:transparent;border-color:var(--accent);color:var(--accent);}
+  .cm-out.done{background:var(--accent);color:#231400;}
+  .cm-log{background:transparent;border-color:var(--accent);color:var(--accent);}
+  .cm-log:active{background:var(--accent);color:#231400;}
+  .cm-sch{background:var(--amber);border-color:var(--accent);color:#fff;}
+  .cm-sch:active{transform:scale(.96);}
+  .cm-btn:active{transform:scale(.96);}
+
+  /* 일지 카드 */
+  .log-card{background:linear-gradient(135deg,#241d10,#1e2545);border:1px solid var(--accent);border-radius:14px;padding:13px;margin-bottom:10px;}
+  .log-card .lc-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .log-card .lc-top b{font-size:14px;color:var(--accent);font-weight:800;}
+  .log-card .lc-top .edit{margin-left:auto;background:var(--card2);border:1px solid var(--line);border-radius:8px;color:var(--amber);font-size:11px;font-weight:800;padding:5px 11px;cursor:pointer;}
+  .log-card .lc-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .log-card .lc-meta .chip{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--txt);font-weight:700;}
+  .log-card .lc-sec{font-size:12.5px;color:var(--txt);line-height:1.55;margin-top:6px;white-space:pre-wrap;}
+  .log-card .lc-sec .k{display:block;color:var(--sub);font-size:11px;font-weight:800;margin-bottom:2px;margin-top:6px;}
+
+  /* 공사일지 입력칸 주황 테두리 (일자 제외) */
+  #logModal .field input,
+  #logModal .field select,
+  #logModal .field textarea{border:1.5px solid var(--accent);padding:9px 11px;font-size:14px;}
+  #logModal .field label{margin-bottom:4px;}
+  #logModal .field{margin-bottom:9px;}
+
+  /* 공종별 투입인원 표 */
+  .manning-head,.manning-row,.manning-total{display:grid;grid-template-columns:1fr 56px 56px 56px;gap:5px;align-items:center;}
+  .manning-head{font-size:10.5px;color:var(--sub);font-weight:800;padding:0 2px 5px;}
+  .manning-head .mh-job{padding-left:2px;}
+  .manning-head .mh-n{text-align:center;}
+  #lgManning{max-height:236px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;padding:5px;background:var(--bg2);}
+  .manning-row{padding:2px 0;}
+  .manning-row .mr-job{font-size:12.5px;color:var(--txt);font-weight:700;padding-left:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .manning-row .mr-prev{text-align:center;font-size:12px;color:var(--sub);font-weight:700;}
+  #logModal .manning-row input{width:100%;padding:6px 2px!important;font-size:13px!important;text-align:center;border:1.5px solid var(--line)!important;border-radius:8px;background:var(--card2);}
+  #logModal .manning-row input:focus{border-color:var(--accent)!important;box-shadow:none;}
+  .manning-row .mr-sum{text-align:center;font-size:13px;color:var(--accent);font-weight:800;}
+  .manning-total{padding:8px 2px 2px;margin-top:6px;border-top:1px solid var(--line);font-weight:800;}
+  .manning-total .mt-job{font-size:12.5px;color:var(--amber);padding-left:3px;}
+  .manning-total .mt-n{text-align:center;font-size:13px;color:var(--txt);}
+  .manning-total #mtSum{color:var(--accent);}
+
+  /* 공종/구분 소제목 칩 */
+  .sect-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;}
+  .sect-chips .sc{background:var(--card2);border:1.5px solid var(--accent);border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:800;color:var(--accent);cursor:pointer;transition:.12s;}
+  .sect-chips .sc:active{background:var(--accent);color:#231400;transform:scale(.95);}
+
+  /* 접기/펼치기 토글 버튼 */
+  .collapse-toggle{width:100%;display:flex;align-items:center;gap:8px;background:var(--card2);border:1.5px solid var(--accent);border-radius:11px;padding:11px 13px;color:var(--accent);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;}
+  .collapse-toggle .ct-sum{margin-left:auto;font-size:12px;font-weight:800;color:var(--txt);background:var(--bg2);border-radius:7px;padding:3px 9px;}
+  .collapse-toggle .arr{font-size:12px;transition:.2s;color:var(--accent);}
+  .collapse-toggle.open .arr{transform:rotate(180deg);}
+  .collapse-inner{margin-top:8px;}
+
+  /* 작업사항 줄 삭제 리스트 */
+  .work-list{display:flex;flex-direction:column;gap:5px;margin-bottom:6px;}
+  .work-line{display:flex;align-items:flex-start;gap:7px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:7px 9px;}
+  .work-line.head{border-color:var(--accent);}
+  .work-line .wl-txt{flex:1;min-width:0;font-size:12.5px;color:var(--txt);font-weight:600;white-space:pre-wrap;word-break:break-word;line-height:1.4;}
+  .work-line.head .wl-txt{color:var(--accent);font-weight:800;}
+  .work-line .wl-del{flex:0 0 auto;width:22px;height:22px;border-radius:6px;background:transparent;border:1px solid var(--line);color:var(--red);font-size:13px;font-weight:800;cursor:pointer;line-height:1;}
+  .work-line .wl-del:active{background:var(--red);color:#fff;}
+
+  /* 자재/장비 표 */
+  .manning-head.mat-head{grid-template-columns:1fr 50px 50px 50px;}
+  .mat-row{display:grid;grid-template-columns:1fr 50px 50px 50px;gap:5px;align-items:center;padding:3px 0;}
+  #logModal .mat-row input.mr-name{width:100%;padding:7px 8px!important;font-size:12.5px!important;text-align:left;border:1.5px solid var(--line)!important;border-radius:8px;background:var(--card2);}
+  #logModal .mat-row input.mr-num{width:100%;padding:6px 2px!important;font-size:12.5px!important;text-align:center;border:1.5px solid var(--line)!important;border-radius:8px;background:var(--card2);}
+  #logModal .mat-row input:focus{border-color:var(--accent)!important;box-shadow:none;}
+  .mat-row .mr-prev2{text-align:center;font-size:12px;color:var(--sub);font-weight:700;}
+  .mat-row .mr-sum2{text-align:center;font-size:12.5px;color:var(--accent);font-weight:800;}
+  .mat-row .mr-del2{position:absolute;}
+  .mat-row{position:relative;}
+  .mat-delwrap{display:flex;justify-content:flex-end;margin-top:-2px;}
+  .mat-row .mr-del-btn{grid-column:1 / -1;justify-self:end;background:transparent;border:none;color:var(--red);font-size:11px;font-weight:800;cursor:pointer;padding:2px 4px;margin-top:-2px;}
+  .mat-addrow{width:100%;margin-top:8px;background:transparent;border:1.5px dashed var(--accent);border-radius:10px;padding:9px;color:var(--accent);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;}
+  .mat-addrow:active{background:var(--accent);color:#231400;}
+  #logModal .field input:focus,
+  #logModal .field select:focus,
+  #logModal .field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(245,166,35,.25);}
+  #logModal #lgDate{border:1px solid var(--line);}
+  #logModal #lgDate:focus{border-color:var(--amber);box-shadow:none;}
+
+  /* 공사일지 목록 */
+  .log-row{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:10px;}
+  .log-row .lr-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .log-row .lr-date{font-size:15px;font-weight:800;color:var(--txt);}
+  .log-row .lr-w{font-size:12px;color:var(--sub);font-weight:700;}
+  .log-row .lr-sum{font-size:12px;color:var(--sub);line-height:1.5;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .log-row .lr-btns{display:flex;gap:7px;}
+  .log-row .lr-btns button{flex:1;border-radius:10px;padding:9px 0;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;border:1.5px solid;}
+  .lr-send{background:var(--amber);border-color:var(--accent)!important;color:#fff;}
+  .lr-edit{background:transparent;border-color:var(--line)!important;color:var(--amber);}
+  .log-empty{color:var(--sub);font-size:12.5px;text-align:center;padding:16px 0;background:var(--card);border:1px dashed var(--line);border-radius:14px;}
+
+  /* 공사일지 — 월별 그룹 + 한 줄 압축 */
+  .logmon{margin-bottom:10px;}
+  .logmon-head{width:100%;display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;cursor:pointer;font-family:inherit;}
+  .logmon-head .lm-t{font-size:13.5px;font-weight:800;color:var(--txt);}
+  .logmon-head .lm-c{font-size:11px;color:var(--sub);font-weight:700;background:var(--bg2);border-radius:7px;padding:2px 8px;}
+  .logmon-head .lm-arr{margin-left:auto;color:var(--sub);font-size:12px;transition:.2s;}
+  .logmon-head.open .lm-arr{transform:rotate(180deg);}
+  .logmon-body{display:none;padding-top:6px;}
+  .logmon-body.open{display:block;}
+  .logline{background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:7px;overflow:hidden;}
+  .logline-top{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;}
+  .logline-top .ll-d{font-size:13.5px;font-weight:800;color:var(--txt);flex:0 0 auto;}
+  .logline-top .ll-w{font-size:12px;flex:0 0 auto;}
+  .logline-top .ll-sum{font-size:11.5px;color:var(--sub);font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .logline-top .ll-arr{color:var(--sub);font-size:11px;flex:0 0 auto;transition:.2s;}
+  .logline-top.open .ll-arr{transform:rotate(180deg);}
+  .logline-detail{display:none;padding:0 12px 12px;border-top:1px solid var(--line);}
+  .logline-detail.open{display:block;}
+  .logline-detail .lld-sec{font-size:12px;color:var(--txt);line-height:1.5;margin-top:9px;white-space:pre-wrap;}
+  .logline-detail .lld-sec .k{display:block;color:var(--sub);font-size:10.5px;font-weight:800;margin-bottom:2px;}
+  .logline-detail .lld-btns{display:flex;gap:7px;margin-top:11px;}
+  .logline-detail .lld-btns button{flex:1;border-radius:10px;padding:9px 0;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;border:1.5px solid;}
+
+  /* 자동 공정표 (간트) */
+  .gantt-tools{display:flex;gap:8px;margin-bottom:12px;}
+  .gantt-tools button{flex:1;border-radius:12px;padding:11px 0;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid var(--accent);}
+  .gt-add{background:var(--amber);color:#fff;}
+  .gt-shift{background:transparent;color:var(--accent);}
+  .gt-shift.on{background:var(--accent);color:#231400;}
+  .gantt-wrap{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 10px;margin-bottom:12px;overflow-x:auto;}
+  .gantt-scroll{min-width:max-content;}
+  .gantt-month{display:flex;font-size:11px;color:var(--sub);font-weight:800;margin-bottom:2px;}
+  .gantt-days{display:flex;border-bottom:1px solid var(--line);padding-bottom:3px;margin-bottom:6px;}
+  .gd{flex:0 0 auto;text-align:center;font-size:9px;color:var(--sub);font-weight:700;}
+  .gd.sun{color:var(--red);}.gd.sat{color:var(--blue);}.gd.today{color:var(--accent);}
+  .gantt-row{display:flex;align-items:center;height:30px;position:relative;margin-bottom:4px;}
+  .gantt-rowlabel{position:sticky;left:0;flex:0 0 auto;font-size:12px;font-weight:700;color:var(--txt);padding-right:8px;white-space:nowrap;background:var(--card);z-index:2;}
+  .gantt-rowlabel.sub{color:var(--sub);font-weight:600;font-size:11px;padding-left:12px;}
+  .gantt-track{position:relative;flex:0 0 auto;height:30px;}
+  .gbar{position:absolute;top:5px;height:20px;border-radius:6px;display:flex;align-items:center;padding:0 7px;font-size:10.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+  .gbar.sub{top:7px;height:16px;opacity:.92;font-size:9.5px;}
+  .gantt-todayline{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);z-index:1;opacity:.7;}
+  .gantt-empty{color:var(--sub);font-size:12.5px;text-align:center;padding:18px 0;}
+  /* 공정 목록 */
+  .ph-row{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 12px;margin-bottom:9px;}
+  .ph-row.sub{margin-left:16px;border-left:3px solid var(--accent);border-radius:0 13px 13px 0;}
+  .ph-top{display:flex;align-items:center;gap:8px;}
+  .ph-dot{width:11px;height:11px;border-radius:3px;flex:0 0 auto;}
+  .ph-name{font-size:14px;font-weight:800;color:var(--txt);}
+  .ph-row.sub .ph-name{font-size:13px;}
+  .ph-period{font-size:11.5px;color:var(--sub);font-weight:600;margin-top:3px;margin-left:19px;}
+  .ph-dday{font-size:11px;font-weight:800;margin-left:auto;padding:3px 8px;border-radius:7px;background:var(--card2);}
+  .ph-dday.run{color:var(--accent);}.ph-dday.done{color:var(--green);}.ph-dday.wait{color:var(--sub);}.ph-dday.late{color:var(--red);}
+  .ph-btns{display:flex;gap:7px;margin-top:9px;}
+  .ph-btns button{flex:1;border-radius:9px;padding:7px 0;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--card2);color:var(--amber);}
+  .ph-btns .addsub{color:var(--green);}
+
+  .day-detail{margin-top:14px;}
+  .day-detail .dh{font-size:13px;font-weight:800;margin-bottom:8px;color:var(--amber);}
+  .day-empty{color:var(--sub);font-size:12.5px;text-align:center;padding:14px 0;}
+
+  /* 협력업체: 들어온 발주 */
+  .incoming{background:var(--card);border:1px solid var(--amber);border-radius:14px;padding:13px;margin-bottom:10px;}
+  .incoming.answered{border-color:var(--line);opacity:.92;}
+  .inc-top{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+  .inc-tag{font-size:10.5px;background:var(--amber);color:#fff;font-weight:800;padding:3px 8px;border-radius:7px;}
+  .inc-tag.done{background:var(--green);color:#04130d;}
+  .inc-time{font-size:11px;color:var(--sub);margin-left:auto;}
+  .inc-mat{font-size:15px;font-weight:800;}
+  .inc-meta{font-size:12px;color:var(--sub);margin-top:3px;line-height:1.6;}
+  .inc-meta b{color:var(--txt);}
+  .inc-form{display:flex;gap:8px;margin-top:11px;align-items:center;}
+  .inc-form input[type=date]{flex:1;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px;color:var(--txt);font-size:14px;font-family:inherit;}
+  .inc-answered-line{margin-top:10px;font-size:13px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);padding-top:10px;}
+
+  /* 문자 미리보기 모달 */
+  .modal-bg{position:fixed;inset:0;z-index:900;background:rgba(8,11,17,.84);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:16px;}
+  .modal-bg.on{display:flex;}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;width:100%;max-width:360px;animation:pop .25s ease;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  @keyframes pop{from{transform:scale(.92);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .modal h3{margin:0 0 4px;font-size:17px;font-weight:800;}
+  .modal .msub{font-size:12.5px;color:var(--sub);margin-bottom:16px;}
+  .sms-bubble{background:#1f3a2e;border:1px solid #2c5a45;border-radius:14px 14px 14px 4px;padding:13px;font-size:13.5px;line-height:1.65;color:#d6f5e6;white-space:pre-line;margin-bottom:8px;}
+  .sms-from{font-size:11px;color:var(--sub);margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+
+  .empty{text-align:center;padding:36px 0;color:var(--sub);font-size:13.5px;line-height:1.8;}
+  .empty .big{font-size:40px;margin-bottom:10px;}
+
+  /* 하단 네비 */
+  .botnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:1px solid var(--line);display:flex;gap:6px;z-index:100;padding:8px 10px calc(8px + env(safe-area-inset-bottom));}
+  .botnav button{flex:1;background:transparent;border:2px solid var(--accent);border-radius:12px;color:var(--accent);font-size:12.5px;font-weight:800;padding:8px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:inherit;}
+  .botnav button .ic{font-size:18px;}
+  .botnav button.on{color:#fff;background:var(--amber);border-color:var(--accent);}
+
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:950;background:var(--card2);color:var(--txt);padding:13px 20px;border-radius:13px;font-size:13px;font-weight:700;border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;transition:.3s;pointer-events:none;white-space:nowrap;max-width:90%;}
+  .toast.on{opacity:1;bottom:110px;}
+  .hidden{display:none!important;}
+  .tab-pane{display:none;}
+  .tab-pane.on{display:block;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">
+      <div class="logo">📦</div>
+      <h1>빌드온</h1>
+      <span id="syncBadge" style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:7px;margin-left:8px;background:#1e2c46;color:var(--sub);">…</span>
+      <div class="who" id="whoLabel" style="margin-left:auto;display:none;"></div>
+    </div>
+    <div class="role-tabs">
+      <div class="role-tab on" data-role="site">🏗️ 현장</div>
+      <div class="role-tab" data-role="vendor">🏢 협력업체</div>
+      <div class="role-tab gear" id="topManageBtn" style="padding:11px 16px;">⚙️ 설정</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===================== 소장 화면 ===================== -->
+    <section class="screen on" id="screen-site">
+
+      <!-- 탭: 발주현황 -->
+      <div class="tab-pane on" id="site-list">
+        <div class="site-row" id="siteRow"></div>
+        <div class="summary">
+          <div class="sm soon" data-filter="confirmed"><div class="n" id="cSoon">0</div><div class="l">입고 예정</div></div>
+          <div class="sm done" data-filter="done"><div class="n" id="cDone">0</div><div class="l">입고 완료</div></div>
+        </div>
+        <div class="sec-title" style="display:flex;align-items:center;gap:8px;">
+          <span id="listTitle">📋 발주 현황</span>
+          <button id="clearFilter" class="hidden" style="margin-left:auto;background:var(--card2);border:1px solid var(--line);border-radius:8px;color:var(--amber);font-size:11px;font-weight:800;padding:4px 10px;cursor:pointer;">✕ 전체보기</button>
+        </div>
+        <div id="orderList"></div>
+      </div>
+
+      <!-- 탭: 발주등록 -->
+      <div class="tab-pane" id="site-new">
+        <div class="sec-title">✏️ 새 발주 등록</div>
+        <div class="card">
+          <div class="field">
+            <label>현장</label>
+            <select id="fSite"></select>
+          </div>
+          <div class="field">
+            <label>자재명 (직접 입력 / 자유추가)</label>
+            <div class="mat-add">
+              <input id="fMat" list="matList" placeholder="예: PF보드 T120, 글라스울 24K…">
+              <button class="mini-btn" id="matSaveBtn">+저장</button>
+            </div>
+            <datalist id="matList"></datalist>
+            <button class="domyeon-btn" id="mgmtMatBtn" style="margin-top:8px;margin-bottom:0;background:var(--amber);border:2px solid var(--accent);color:#fff;font-weight:800;font-size:12px;padding:8px;">📦 자재 목록 관리</button>
+          </div>
+          <div class="field row2">
+            <div><label>수량</label><input id="fQty" type="number" inputmode="numeric" placeholder="0"></div>
+            <div><label>단위</label>
+              <select id="fUnit"><option>장</option><option>EA</option><option>m²</option><option>m</option><option>롤</option><option>포</option><option>박스</option></select>
+            </div>
+          </div>
+          <div class="field">
+            <label>희망 입고일</label>
+            <input id="fWant" type="date">
+          </div>
+          <div class="field">
+            <label>협력업체 / 담당자</label>
+            <select id="fVendor"></select>
+            <button class="domyeon-btn" id="mgmtVendorBtn" style="margin-top:8px;margin-bottom:0;background:var(--amber);border:2px solid var(--accent);color:#fff;font-weight:800;font-size:12px;padding:8px;">⚙️ 협력업체 추가·관리</button>
+          </div>
+          <div class="field">
+            <label>요청 메모 (선택)</label>
+            <textarea id="fMemo" rows="2" placeholder="예: 1층 정문으로 입고 요청"></textarea>
+          </div>
+          <button class="btn btn-primary" id="submitOrder" style="background:var(--amber);border:2px solid var(--accent);box-shadow:0 4px 16px rgba(59,130,246,.3);">발주하기 · 협력업체로 문자 전송</button>
+        </div>
+        <p style="font-size:11.5px;color:var(--sub);text-align:center;line-height:1.7;">
+          발주하면 협력업체 담당자에게 문자(또는 알림톡)가 가고,<br>회사가 입력한 배송일이 캘린더에 자동으로 쌓입니다.
+        </p>
+      </div>
+
+      <!-- 탭: 캘린더 -->
+      <div class="tab-pane" id="site-cal">
+        <!-- 출근 · 퇴근 · 일지쓰기 · 일정 (동일 크기 4개) -->
+        <div class="commute">
+          <button class="cm-btn cm-in" id="cmIn"><span class="ic">🌅</span>출근<span class="tm" id="cmInTm">--:--</span></button>
+          <button class="cm-btn cm-out" id="cmOut"><span class="ic">🌆</span>퇴근<span class="tm" id="cmOutTm">--:--</span></button>
+          <button class="cm-btn cm-log" id="writeLogBtn"><span class="ic">📝</span>일지<span class="tm">&nbsp;</span></button>
+          <button class="cm-btn cm-sch" id="addSchBtn2"><span class="ic">＋</span>일정<span class="tm">&nbsp;</span></button>
+        </div>
+        <div class="sec-title" style="display:flex;align-items:center;gap:8px;">
+          <span>📅 일정 캘린더</span>
+        </div>
+        <div class="card">
+          <div class="cal-head">
+            <div class="mn" id="calMonth">2026년 6월</div>
+            <div class="cal-nav"><button id="calPrev">‹</button><button id="calNext">›</button></div>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="cal-legend">
+            <span><i class="dot wait" style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></i>대기</span>
+            <span><i class="dot confirmed" style="width:7px;height:7px;border-radius:50%;background:var(--blue);"></i>입고예정</span>
+            <span><i class="dot done" style="width:7px;height:7px;border-radius:50%;background:var(--green);"></i>입고완료</span>
+            <span><i class="dot sched" style="width:7px;height:7px;border-radius:50%;background:var(--purple);"></i>일정</span>
+            <span><i class="dot log" style="width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 1px var(--accent);"></i>일지</span>
+            <span><i style="width:16px;height:7px;border-radius:3px;background:var(--blue);display:inline-block;"></i>공정기간</span>
+          </div>
+        </div>
+        <!-- 공사일지 (선택한 날 상세 · 접기) -->
+        <button class="collapse-btn" data-toggle="boxDayDetail" style="margin-top:14px;"><span>📝 공사일지</span><span class="arr">▼</span></button>
+        <div class="collapse-body" id="boxDayDetail"><div class="day-detail" id="dayDetail"></div></div>
+
+        <!-- 공사일지 목록 (PDF 저장·전송 · 접기) -->
+        <button class="collapse-btn" data-toggle="boxLogList"><span>📄 공사일지 목록</span><span class="cnt" id="logCnt">0</span><span class="arr">▼</span></button>
+        <div class="collapse-body" id="boxLogList"><div id="logList"></div></div>
+      </div>
+
+      <!-- 탭: 자동 공정표 (간트) -->
+      <div class="tab-pane" id="site-gantt">
+        <div class="sec-title" style="display:flex;align-items:center;gap:8px;">
+          <span>📊 자동 공정표</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--sub);font-weight:600;">공정·기간만 입력 · 날짜 자동</span>
+        </div>
+        <div class="gantt-tools">
+          <button class="gt-add" id="phAddBtn">＋ 공정 추가</button>
+          <button class="gt-shift on" id="phShiftBtn" title="앞 공정이 밀리면 뒤 공정도 자동으로 밀림">🔗 자동연동 ON</button>
+        </div>
+        <button id="stdGenBtn" style="width:100%;background:linear-gradient(135deg,#2a2350,#1e2545);border:2px solid var(--purple);border-radius:12px;padding:13px;color:#c4b5ff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:12px;">🏗️ 착공일 넣고 표준공정 자동생성 (107개)</button>
+
+        <!-- 공정 캘린더 (달력형 공정표) -->
+        <div class="sec-title">🗓️ 공정 캘린더</div>
+        <div class="card">
+          <div class="cal-head">
+            <div class="mn" id="gcalMonth">2026년 6월</div>
+            <div class="cal-nav"><button id="gcalPrev">‹</button><button id="gcalNext">›</button></div>
+          </div>
+          <div class="cal-grid" id="gcalGrid"></div>
+        </div>
+        <div class="day-detail" id="gdayDetail"></div>
+
+        <!-- 세부공정표 (범례, 접기) -->
+        <button class="collapse-btn" data-toggle="boxLegend"><span>📑 세부공정표</span><span class="cnt" id="legCnt">0</span><span class="arr">▼</span></button>
+        <div class="collapse-body" id="boxLegend"><div class="cal-legend leg-list" id="gcalLegend"></div></div>
+
+        <!-- 간트 차트 (접기) -->
+        <button class="collapse-btn" data-toggle="boxGantt"><span>📊 간트 차트</span><span class="arr">▼</span></button>
+        <div class="collapse-body" id="boxGantt">
+          <div class="gantt-wrap" id="ganttWrap"><div class="gantt-empty">아직 등록된 공정이 없어요.<br><b style="color:var(--accent)">＋ 공정 추가</b>로 첫 공정을 넣어보세요.</div></div>
+        </div>
+
+        <!-- 공정 목록 (접기) -->
+        <button class="collapse-btn" data-toggle="boxPhaseList"><span>📋 공정 목록</span><span class="cnt" id="phCnt">0</span><span class="arr">▼</span></button>
+        <div class="collapse-body" id="boxPhaseList"><div id="phaseList"></div></div>
+
+        <p style="font-size:11px;color:var(--sub);text-align:center;line-height:1.7;margin-top:6px;">
+          공정명·시작일·작업일수만 넣으면 종료일이 자동 계산되고,<br>공정 캘린더에 공정 막대가 자동으로 표시됩니다. (달력일 기준)
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== 협력업체 화면 ===================== -->
+    <section class="screen" id="screen-vendor">
+      <div class="site-row" id="vendorCoRow" style="margin-bottom:12px;"></div>
+      <div class="sec-title">📨 들어온 발주 (배송일을 입력하세요)</div>
+      <div id="incomingList"></div>
+    </section>
+
+    <div class="toast" id="toast"></div>
+  </main>
+
+  <!-- 하단 네비 -->
+  <nav class="botnav" id="botnav">
+    <button class="on" data-pane="site-list"><span class="ic">📋</span>현황</button>
+    <button data-pane="site-new"><span class="ic">➕</span>발주</button>
+    <button data-pane="site-cal"><span class="ic">📅</span>캘린더</button>
+    <button data-pane="site-gantt"><span class="ic">📊</span>공정표</button>
+  </nav>
+</div>
+
+<!-- 현장 관리 모달 -->
+<div class="modal-bg" id="siteModal">
+  <div class="modal">
+    <h3>🏗️ 현장 관리</h3>
+    <div class="msub">현장을 추가하거나 삭제할 수 있어요</div>
+    <div id="siteMgmtList" style="max-height:42vh;overflow-y:auto;margin-bottom:14px;"></div>
+    <div style="border-top:1px solid var(--line);padding-top:14px;">
+      <div class="field" style="margin-bottom:10px;"><input id="nsName" placeholder="새 현장 이름 (예: 래미안 처인 2단지)"></div>
+      <button class="btn btn-green btn-sm" id="nsAdd">+ 현장 추가</button>
+    </div>
+    <div style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px;display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-sm" id="goVendorMgmt" style="background:var(--amber);border:2px solid var(--accent);color:#fff;font-weight:800;">⚙️ 협력업체 추가·관리</button>
+      <button class="btn btn-ghost btn-sm" id="goMatMgmt">📦 자재 목록 관리</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="siteClose" style="margin-top:14px;">닫기</button>
+  </div>
+</div>
+
+<!-- 담당자 관리 모달 -->
+<div class="modal-bg" id="vendorModal">
+  <div class="modal">
+    <h3>⚙️ 협력업체 관리</h3>
+    <div class="msub">발주 시 문자를 받을 협력업체 담당자입니다</div>
+    <div id="vendorMgmtList" style="max-height:42vh;overflow-y:auto;margin-bottom:14px;"></div>
+    <div style="border-top:1px solid var(--line);padding-top:14px;">
+      <div class="field" style="margin-bottom:8px;"><input id="nvCompany" placeholder="회사명 (예: 블루인슈텍)"></div>
+      <div class="field" style="margin-bottom:8px;"><input id="nvName" placeholder="담당자 이름 (예: 김과장)"></div>
+      <div class="field" style="margin-bottom:10px;"><input id="nvPhone" type="tel" inputmode="tel" placeholder="전화번호 (예: 010-1234-5678)"></div>
+      <button class="btn btn-green btn-sm" id="nvAdd">+ 협력업체 추가</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="vendorClose" style="margin-top:10px;">닫기</button>
+    <button class="btn btn-ghost btn-sm" id="resetData" style="margin-top:8px;color:var(--red);">⟳ 데이터 초기화 (기본값으로)</button>
+  </div>
+</div>
+
+<!-- 자재 목록 관리 모달 -->
+<div class="modal-bg" id="matModal">
+  <div class="modal">
+    <h3>📦 자재 목록 관리</h3>
+    <div class="msub">자주 쓰는 자재를 추가하거나 삭제할 수 있어요</div>
+    <div id="matMgmtList" style="max-height:42vh;overflow-y:auto;margin-bottom:14px;"></div>
+    <div style="border-top:1px solid var(--line);padding-top:14px;">
+      <div class="field" style="margin-bottom:10px;"><input id="nmName" placeholder="새 자재명 (예: 우레탄폼 T50)"></div>
+      <button class="btn btn-green btn-sm" id="nmAdd">+ 자재 추가</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="matClose" style="margin-top:10px;">닫기</button>
+  </div>
+</div>
+
+<!-- 발주 수정 모달 -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <h3>✏️ 발주 수정</h3>
+    <div class="msub">발주 내용을 고칠 수 있어요</div>
+    <div class="field">
+      <label>자재명</label>
+      <input id="eMat" list="matList" placeholder="자재명">
+    </div>
+    <div class="field row2">
+      <div><label>수량</label><input id="eQty" type="number" inputmode="numeric" placeholder="0"></div>
+      <div><label>단위</label>
+        <select id="eUnit"><option>장</option><option>EA</option><option>m²</option><option>m</option><option>롤</option><option>포</option><option>박스</option></select>
+      </div>
+    </div>
+    <div class="field"><label>희망 입고일</label><input id="eWant" type="date"></div>
+    <div class="field"><label>입고(배송) 확정일</label><input id="eDeliver" type="date"></div>
+    <div class="field">
+      <label>상태</label>
+      <select id="eStatus">
+        <option value="wait">발주대기</option>
+        <option value="confirmed">입고예정</option>
+        <option value="done">입고완료</option>
+      </select>
+    </div>
+    <div class="field"><label>협력업체 / 담당자</label><select id="eVendor"></select></div>
+    <div class="field"><label>요청 메모 (선택)</label><textarea id="eMemo" rows="2" placeholder="예: 1층 정문으로 입고 요청"></textarea></div>
+    <button class="btn btn-green" id="eSave" style="margin-top:4px;">💾 저장</button>
+    <button class="btn btn-ghost btn-sm" id="eCancel" style="margin-top:10px;">취소</button>
+  </div>
+</div>
+
+<!-- 캘린더 일정 등록/수정 모달 -->
+<div class="modal-bg" id="schModal">
+  <div class="modal">
+    <h3 id="schTitle">📅 일정 등록</h3>
+    <div class="msub" id="schSub">현장 일정·메모를 자유롭게 등록하세요</div>
+    <div class="field"><label>시작일</label><input id="schDate" type="date"></div>
+    <div class="field"><label>종료일 <span style="color:var(--sub);font-weight:600;">(여러 날 공사면 마지막 날)</span></label><input id="schEnd" type="date"></div>
+    <div class="field">
+      <label>종류</label>
+      <select id="schType">
+        <option value="공사">🏗️ 공사·작업</option>
+        <option value="미팅">🤝 미팅·약속</option>
+        <option value="점검">✅ 점검·검측</option>
+        <option value="기타">📌 기타</option>
+      </select>
+    </div>
+    <div class="field"><label>내용</label><input id="schTitleInput" placeholder="예: 골조 타설, 감리 점검, 자재 검수"></div>
+    <div class="field"><label>메모 (선택)</label><textarea id="schMemo" rows="2" placeholder="상세 내용"></textarea></div>
+    <button class="btn btn-green" id="schSave" style="margin-top:4px;">💾 저장</button>
+    <button class="btn btn-ghost btn-sm" id="schDelete" style="margin-top:8px;color:var(--red);display:none;">🗑️ 이 일정 삭제</button>
+    <button class="btn btn-ghost btn-sm" id="schCancel" style="margin-top:8px;">취소</button>
+  </div>
+</div>
+
+<!-- 공사일지 작성/수정 모달 -->
+<div class="modal-bg" id="logModal">
+  <div class="modal" style="max-width:440px;">
+    <h3 id="logTitle">📝 공사일지</h3>
+    <div class="msub" id="logSub">날짜별 작업 내용을 기록하세요</div>
+    <div class="site-info-bar">
+      <div class="sib-left">
+        <div class="sib-row"><span class="sib-l">현장</span><span class="sib-v" id="lgSiteName">-</span></div>
+        <div class="sib-row"><span class="sib-l">소장</span><span class="sib-v" id="lgSiteMgr">-</span></div>
+      </div>
+      <button type="button" id="lgSiteEditBtn" class="sib-edit">✏️ 현장정보 수정</button>
+    </div>
+    <div id="lgSiteDates" class="site-dates"></div>
+    <div class="field row3">
+      <div><label>일자</label><input id="lgDate" type="date"></div>
+      <div><label>날씨</label>
+        <select id="lgWeather">
+          <option>☀️ 맑음</option><option>⛅ 구름조금</option><option>☁️ 흐림</option>
+          <option>🌧️ 비</option><option>🌨️ 눈</option><option>💨 바람</option>
+        </select>
+      </div>
+      <div><label>기온(℃)</label>
+        <div style="display:flex;gap:5px;">
+          <input id="lgTmax" type="number" inputmode="numeric" placeholder="최고">
+          <input id="lgTmin" type="number" inputmode="numeric" placeholder="최저">
+        </div>
+      </div>
+    </div>
+    <div class="field" style="display:flex;gap:7px;">
+      <div style="flex:1;min-width:0;"><label>출근</label><input id="lgIn" type="time" style="width:100%;"></div>
+      <div style="flex:1;min-width:0;"><label>퇴근</label><input id="lgOut" type="time" style="width:100%;"></div>
+    </div>
+    <div class="field">
+      <button type="button" class="collapse-toggle" id="manningToggle">
+        <span>👷 공종별 투입 인원</span>
+        <span class="ct-sum" id="manningBtnSum">0명</span>
+        <span class="arr">▾</span>
+      </button>
+      <div class="collapse-inner" id="manningBox" style="display:none;">
+        <div class="manning-head">
+          <span class="mh-job">공종</span>
+          <span class="mh-n">전일누계</span>
+          <span class="mh-n">금일</span>
+          <span class="mh-n">계</span>
+        </div>
+        <div id="lgManning"></div>
+        <div class="manning-total">
+          <span class="mt-job">합계</span>
+          <span class="mt-n" id="mtPrev">0</span>
+          <span class="mt-n" id="mtToday">0</span>
+          <span class="mt-n" id="mtSum">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>금일 작업사항</label>
+      <div class="sect-chips" data-target="today"></div>
+      <div id="todayList" class="work-list"></div>
+      <textarea id="lgToday" rows="2" placeholder="직접 입력하거나 위 칩으로 항목을 추가하세요"></textarea>
+    </div>
+    <div class="field">
+      <label>명일 예정사항</label>
+      <div class="sect-chips" data-target="tomorrow"></div>
+      <div id="tomorrowList" class="work-list"></div>
+      <textarea id="lgTomorrow" rows="2" placeholder="직접 입력하거나 위 칩으로 항목을 추가하세요"></textarea>
+    </div>
+    <div class="field">
+      <button type="button" class="collapse-toggle" id="matToggle">
+        <span>📦 주요 자재 / 장비</span>
+        <span class="ct-sum" id="matBtnSum">0건</span>
+        <span class="arr">▾</span>
+      </button>
+      <div class="collapse-inner" id="matBox" style="display:none;">
+        <div class="manning-head mat-head">
+          <span class="mh-job">자재 / 장비명</span>
+          <span class="mh-n">전일누계</span>
+          <span class="mh-n">금일</span>
+          <span class="mh-n">계</span>
+        </div>
+        <div id="lgMatRows"></div>
+        <button type="button" id="matAddRow" class="mat-addrow">＋ 자재 / 장비 추가</button>
+      </div>
+    </div>
+    <div class="field"><label>특기사항 (선택)</label><textarea id="lgNote" rows="2" placeholder="예: 안전점검 실시, 현장 정리정돈"></textarea></div>
+    <div class="field">
+      <label>📷 현장 사진 (특기사항)</label>
+      <input id="lgPhotoInput" type="file" accept="image/*" capture="environment" multiple style="display:none;">
+      <button type="button" id="lgPhotoBtn" style="width:100%;background:var(--card2);border:1.5px solid var(--accent);border-radius:11px;padding:13px;color:var(--accent);font-size:14px;font-weight:800;cursor:pointer;">📸 사진 촬영 · 추가</button>
+      <div id="lgPhotoGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;"></div>
+    </div>
+    <button class="btn btn-green" id="lgSave" style="margin-top:4px;">💾 저장</button>
+    <button class="btn btn-ghost btn-sm" id="lgDelete" style="margin-top:8px;color:var(--red);display:none;">🗑️ 이 일지 삭제</button>
+    <button class="btn btn-ghost btn-sm" id="lgCancel" style="margin-top:8px;">취소</button>
+  </div>
+</div>
+
+<!-- 현장정보 수정 팝업(일지에서 호출) -->
+<div class="modal-bg" id="siteInfoModal" style="z-index:950;">
+  <div class="modal" style="max-width:340px;">
+    <h3>🏗️ 현장정보 수정</h3>
+    <div class="msub" id="siInfoSub">이 현장의 정보를 입력하세요</div>
+    <div class="field"><label>현장명</label><input id="siName" placeholder="현장 이름"></div>
+    <div class="field"><label>현장소장</label><input id="siMgr" placeholder="예: 홍길동 소장 (010-0000-0000)"></div>
+    <div class="field"><label>착공일</label><input id="siStart" type="date"></div>
+    <div class="field"><label>특검예정일</label><input id="siSpecial" type="date"></div>
+    <div class="field"><label>준공예정일</label><input id="siEnd" type="date"></div>
+    <button class="btn btn-green" id="siSave" style="margin-top:4px;">💾 저장</button>
+    <button class="btn btn-ghost btn-sm" id="siCancel" style="margin-top:8px;">취소</button>
+  </div>
+</div>
+
+<!-- 공사일지 PDF 렌더 영역 (화면 밖, 캡처 전용) -->
+<div id="pdfSheet" style="position:fixed;left:-9999px;top:0;width:794px;background:#fff;color:#111;padding:40px;box-sizing:border-box;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;"></div>
+
+<!-- 공사일지 전송 선택 모달 -->
+<div class="modal-bg" id="sendModal">
+  <div class="modal">
+    <h3>📄 공사일지 보내기</h3>
+    <div class="msub" id="sendSub">PDF로 저장하거나 바로 전송하세요</div>
+    <button class="btn btn-green" id="sendShare" style="margin-bottom:8px;background:var(--amber);border:2px solid var(--accent);color:#fff;">📤 공유 (카톡·문자·메일 선택)</button>
+    <button class="btn btn-ghost btn-sm" id="sendDownload" style="margin-bottom:8px;">⬇️ PDF 다운로드</button>
+    <button class="btn btn-ghost btn-sm" id="sendEmail" style="margin-bottom:8px;">✉️ 이메일 앱 열기</button>
+    <button class="btn btn-ghost btn-sm" id="sendSms" style="margin-bottom:8px;">💬 문자 앱 열기</button>
+    <button class="btn btn-ghost btn-sm" id="sendCancel" style="margin-top:6px;">닫기</button>
+  </div>
+</div>
+
+<!-- 공정 등록/수정 모달 -->
+<div class="modal-bg" id="phModal">
+  <div class="modal">
+    <h3 id="phTitle">📊 공정 등록</h3>
+    <div class="msub" id="phSub">공정명·시작일·작업일수만 넣으면 종료일은 자동 계산돼요</div>
+    <div class="field"><label>공정명</label><input id="phName" placeholder="예: 토공사 / 기초·골조 / 단열·마감"></div>
+    <div class="field row2">
+      <div><label>시작일</label><input id="phStart" type="date"></div>
+      <div><label>작업일수 (일)</label><input id="phDays" type="number" inputmode="numeric" min="1" placeholder="예: 5"></div>
+    </div>
+    <div class="field" id="phLinkWrap">
+      <label>앞 공정에 이어붙이기 (자동연동)</label>
+      <select id="phAfter"><option value="">— 직접 시작일 지정 —</option></select>
+      <div style="font-size:11px;color:var(--sub);margin-top:5px;line-height:1.5;">선택하면 그 공정 <b>종료일 다음날</b>부터 시작되고, 앞 공정이 밀리면 같이 밀립니다.</div>
+    </div>
+    <div class="field"><label>막대 색상</label>
+      <div id="phColorRow" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="field" id="phEndPreview" style="font-size:12.5px;color:var(--accent);font-weight:800;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:center;">종료일: -</div>
+    <button class="btn btn-green" id="phSave" style="margin-top:4px;">💾 저장</button>
+    <button class="btn btn-ghost btn-sm" id="phDelete" style="margin-top:8px;color:var(--red);display:none;">🗑️ 이 공정 삭제</button>
+    <button class="btn btn-ghost btn-sm" id="phCancel" style="margin-top:8px;">취소</button>
+  </div>
+</div>
+
+<!-- 표준공정 자동생성 모달 -->
+<div class="modal-bg" id="stdModal">
+  <div class="modal">
+    <h3>🏗️ 표준공정 자동생성</h3>
+    <div class="msub">착공일만 넣으면 준공까지 107개 작업이 공정표(공정 캘린더)에 자동으로 깔립니다 (약 5개월·155일 공정)</div>
+    <div class="field"><label>착공일 (D-day 기준)</label><input id="stdStart" type="date"></div>
+    <div class="field" id="stdPreview" style="font-size:12.5px;color:var(--accent);font-weight:800;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:center;line-height:1.6;">착공일을 선택하세요</div>
+    <div style="font-size:11px;color:var(--sub);line-height:1.6;margin-bottom:12px;">
+      ※ 나중에 착공일만 다시 바꾸면 <b style="color:var(--accent)">모든 일정이 같은 간격으로 자동 이동</b>합니다.<br>
+      ※ 기존에 생성한 표준공정이 있으면 새 착공일 기준으로 다시 깔립니다(직접 추가한 일정은 유지).
+    </div>
+    <button class="btn btn-green" id="stdGenConfirm" style="margin-top:2px;background:var(--amber);border:2px solid var(--accent);color:#fff;">📅 캘린더에 자동 투입</button>
+    <button class="btn btn-ghost btn-sm" id="stdClearBtn" style="margin-top:8px;color:var(--red);display:none;">🗑️ 생성된 표준공정 전체 삭제</button>
+    <button class="btn btn-ghost btn-sm" id="stdCancel" style="margin-top:8px;">취소</button>
+  </div>
+</div>
+
+<!-- 문자 미리보기 모달 -->
+<div class="modal-bg" id="smsModal">
+  <div class="modal">
+    <h3>📩 협력업체로 발송</h3>
+    <div class="msub" id="smsTo">대성하드웨어 담당자에게 문자 전송</div>
+    <div class="sms-from">💬 빌드온 자동작성 문자</div>
+    <div class="sms-bubble" id="smsBody"></div>
+    <div style="font-size:12px;color:var(--sub);margin-top:10px;line-height:1.6;" id="smsRecv">받는사람: -</div>
+    <button class="btn btn-green" id="smsConfirm" style="margin-top:14px;background:var(--amber);border:2px solid var(--accent);box-shadow:0 4px 16px rgba(59,130,246,.3);">📩 발주 · 문자 보내기</button>
+    <div style="font-size:11px;color:var(--sub);text-align:center;margin-top:8px;line-height:1.5;">폰에서는 문자앱이 열리고, PC에서는 내용이 복사됩니다</div>
+    <button class="btn btn-ghost btn-sm" id="smsCancel" style="margin-top:8px;">취소</button>
+  </div>
+</div>
+
+<!-- Firebase SDK (compat 버전) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- PDF 생성 (공사일지 PDF 저장·전송용) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+/* ============ 저장소 ============ */
+const KEY='jajaecall_v1';
+/* ===== 표준 공정 템플릿 (착공일 기준 상대일수) ===== */
+const STD_SCHEDULE=[
+[0,'착공시작'],[5,'매트CON\'C 타설'],[7,'되메우기'],[7,'전기 및 통신 관로 작업'],[7,'임시전력 배전판 설치'],[7,'오/배수,우수배관공사'],[8,'비계설치(1차분)'],[16,'2층바닥CON\'C타설'],[25,'3층바닥CON\'C타설'],[26,'비계설치(2차분)'],[34,'4층바닥CON\'C타설'],[35,'1층거푸집해체 및 정리'],[41,'2층거푸집해체 및 정리'],[42,'다락바닥CON\'C타설'],[42,'EV 자재 반입 일정 및 시공일정 체크'],[45,'1차현장확인 및 석종결정'],[46,'1층상가 미장 및 방수'],[49,'3층거푸집해체 및 정리'],[51,'창호타입 및 칼라선정'],[51,'목문틀 칼라 및 타입선정'],[51,'내부 입선 작업'],[52,'지붕CON\'C타설'],[54,'석재실측'],[57,'4층거푸집해체 및 정리'],[59,'석재도면완성현장제출'],[60,'고시먹 놓기'],[61,'에어컨 현장방문 및 일정조율'],[62,'석공사 도면승인 및 발주'],[62,'다락 거푸집 해체정리'],[62,'지붕,옥상,테라스 방수, 계단실 견출'],[62,'화장실,보일러실,배관 및 수도배관 작업'],[63,'목문틀 발주'],[64,'할석체크'],[68,'할석, 지붕자재선정'],[69,'에어컨 선배관 및 드레인작업'],[69,'목문틀 설치'],[70,'현관물틀 실측'],[71,'계단걸레받이 시공'],[74,'징크 현장확인 및 실측'],[75,'각층 현관문틀 설치'],[78,'석재 입고 및 시공작업'],[78,'계단벽,파라펫,화장실,보일러실 방수 및 미장'],[82,'지붕공사'],[83,'창호 1차 실측'],[89,'창호 1차 시공 및 2차 실측'],[91,'엘리베이터 잠 설치'],[92,'20T 단열재 하부돌리기'],[92,'도시가스 미팅 및 공사범위 결정'],[93,'계단석재발주, 외부 후드캡 설치'],[94,'계단천정 뿜칠'],[95,'실리콘작업'],[95,'계단타일 시공(선택)'],[95,'기포방통 먹놓기'],[96,'창호 2차시공/상가 AL창호 시공/방화문틀 설치'],[96,'난방 배관 및 수압테스트'],[97,'창호주위 사춤'],[98,'층간소음재'],[98,'도시가스 배관작업'],[100,'기포타설'],[101,'선홈통 설치'],[102,'인테리어 및 등기구 도면 확정'],[103,'비계해체'],[106,'방통타설(ELEV PIT포함)'],[107,'계단석재시공'],[108,'도로굴착 및 배관'],[109,'보일러실 천정 작업'],[109,'우레탄 방수'],[110,'타일 1차시공(화장실/다용도실 타일)'],[111,'계단 난간대 실측'],[111,'위생기구선정'],[112,'보일러실 천정 뿜칠'],[113,'계단마구리 미장/상가 샷시 상부 미장'],[113,'외단열재시공'],[115,'석고보드 떡가배시공'],[115,'보일러 시공'],[115,'가구 사양 및 디자인 결정'],[117,'각층 현관문짝 설치'],[117,'내장 목공사 작업'],[117,'준공서류 준비 시작'],[118,'상가 내부 도장'],[119,'콘센트/스위치 취부'],[120,'계단난간대 설치'],[121,'ELEV검사'],[123,'가구실측 및 타일선작업'],[124,'다락계단 난간대 실측'],[124,'등기구발주'],[125,'화장실 천정돔 공사'],[125,'타일2차시공(아트월/주방)'],[127,'계단실 천정 뿜칠'],[127,'등기구 타공 및 배선정리'],[127,'부대토목작업 및 조경공사'],[130,'다락난간대 설치'],[130,'위생기구설치'],[130,'가구 설치'],[132,'설계사무실 방문'],[132,'도배시공'],[135,'감리자 방문'],[137,'등기구 설치'],[139,'마루 및 바닥재 시공'],[141,'방문짝 발주'],[142,'에어컨 설치'],[145,'준공청소'],[146,'방문짝 시공'],[148,'특검'],[152,'마감코킹'],[155,'준공완료'],[155,'잔손보기']
+];
+
+const clone=o=>JSON.parse(JSON.stringify(o));
+const todayISO=()=>new Date().toISOString().slice(0,10);
+function plusDays(n){const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
+
+const DEFAULT={
+  sites:['이오스종합건설'],
+  materials:['PF보드 T120','PF보드 T100','비드법 단열재 2종 T100','XPS 특호 T50','글라스울 24K','층간차음재 30mm'],
+  vendors:[
+    {id:11, company:'블루인슈텍', name:'김과장', phone:'010-1234-5678'},
+    {id:12, company:'대성하드웨어', name:'박부장', phone:'010-2222-3333'},
+    {id:13, company:'한성석고', name:'이대리', phone:'010-4444-5555'},
+  ],
+  curSite:'이오스종합건설',
+  siteInfo:{},
+  orders:[],
+  schedules:[],
+  daylogs:[],
+  phases:[]
+};
+
+let DB;
+// ===== 연동 모드 판별 =====
+const CLOUD_ON = !!(typeof FIREBASE_CONFIG!=='undefined' && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
+let fdb=null, docRef=null, applyingRemote=false;
+
+function setBadge(state){
+  const b=document.getElementById('syncBadge');if(!b)return;
+  if(state==='cloud'){b.textContent='☁ '+CLIENT_NAME+' 연동중';b.style.background='#143020';b.style.color='var(--green)';}
+  else if(state==='connecting'){b.textContent='연결중…';b.style.background='#2a2f1a';b.style.color='var(--sub)';}
+  else if(state==='error'){b.textContent='⚠ 오프라인';b.style.background='#3a2530';b.style.color='var(--red)';}
+  else{b.textContent='📱 이 기기';b.style.background='#2a2f1a';b.style.color='var(--sub)';}
+}
+function migrate(){
+  if(!DB||typeof DB!=='object')DB=clone(DEFAULT);
+  if(!Array.isArray(DB.sites))DB.sites=clone(DEFAULT.sites);
+  if(!Array.isArray(DB.materials))DB.materials=clone(DEFAULT.materials);
+  if(!Array.isArray(DB.vendors))DB.vendors=clone(DEFAULT.vendors);
+  if(!Array.isArray(DB.orders))DB.orders=clone(DEFAULT.orders);
+  if(!Array.isArray(DB.schedules))DB.schedules=[];
+  DB.schedules.forEach(s=>{if(!s.end)s.end=s.date;});
+  if(!Array.isArray(DB.daylogs))DB.daylogs=[];
+  DB.daylogs.forEach(l=>{if(!Array.isArray(l.photos))l.photos=[];});
+  if(!Array.isArray(DB.phases))DB.phases=[];
+  if(!DB.stdStart||typeof DB.stdStart!=='object')DB.stdStart={};
+  if(!DB.siteInfo||typeof DB.siteInfo!=='object')DB.siteInfo={};
+  if(!DB.curSite)DB.curSite=DB.sites[0]||'현장';
+}
+function loadLocal(){
+  try{DB=JSON.parse(localStorage.getItem(KEY))||clone(DEFAULT);}
+  catch(e){DB=clone(DEFAULT);}
+  migrate();
+}
+function save(){
+  if(CLOUD_ON && docRef && !applyingRemote){
+    docRef.set(clone(DB)).catch(err=>{console.error(err);toast('저장 실패 · 인터넷을 확인하세요');});
+  }
+  try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}
+}
+function renderAll(){
+  const role=document.querySelector('.role-tab.on')?.dataset.role||'site';
+  if(role==='site')renderSite(); else renderVendor();
+  if(document.querySelector('#site-cal.on'))renderCal();
+}
+function waitForFirebase(timeoutMs){
+  return new Promise(resolve=>{
+    const start=Date.now();
+    (function check(){
+      if(typeof firebase!=='undefined' && firebase.firestore){resolve(true);return;}
+      if(Date.now()-start>timeoutMs){resolve(false);return;}
+      setTimeout(check,150);
+    })();
+  });
+}
+async function initData(){
+  if(CLOUD_ON){
+    setBadge('connecting');
+    loadLocal();
+    const ready=await waitForFirebase(10000);
+    if(!ready){
+      console.error('Firebase SDK 로드 실패 (네트워크 또는 미리보기 차단)');
+      setBadge('error');toast('클라우드 SDK 로드 실패 · 이 기기 저장으로 동작');
+      return;
+    }
+    try{
+      if(!firebase.apps || !firebase.apps.length){firebase.initializeApp(FIREBASE_CONFIG);}
+      fdb=firebase.firestore();
+      docRef=fdb.collection('teams').doc(TEAM_CODE);
+      const snap=await docRef.get();
+      if(snap.exists){DB=snap.data();migrate();}
+      else{DB=clone(DEFAULT);await docRef.set(clone(DB));}
+      docRef.onSnapshot(s=>{
+        if(!s.exists)return;
+        applyingRemote=true;
+        const cur=DB&&DB.curSite;
+        DB=s.data();migrate();
+        if(cur&&DB.sites.includes(cur))DB.curSite=cur;
+        renderAll();
+        applyingRemote=false;
+      });
+      setBadge('cloud');
+      renderAll();
+      return;
+    }catch(err){
+      console.error('Firebase 연동 실패:',err);
+      setBadge('error');toast('클라우드 연결 실패 · 이 기기 저장으로 전환');
+    }
+    return;
+  }
+  loadLocal();
+  setBadge('local');
+}
+
+/* ============ 유틸 ============ */
+const $=s=>document.querySelector(s);
+const $$=s=>document.querySelectorAll(s);
+const STT={wait:{t:'발주대기',c:'wait'},confirmed:{t:'입고예정',c:'confirmed'},done:{t:'입고완료',c:'done'}};
+let toastTimer;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),2400);}
+function fmtDate(iso){if(!iso)return '-';const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()}`;}
+function dday(iso){if(!iso)return '';const diff=Math.round((new Date(iso)-new Date(todayISO()))/86400000);if(diff===0)return '오늘';if(diff>0)return `D-${diff}`;return `D+${-diff}`;}
+
+/* ============ 역할/탭 전환 ============ */
+$$('.role-tab').forEach(t=>t.onclick=()=>{
+  // ⚙️ 설정 버튼은 탭이 아니라 현장 관리 모달을 연다
+  if(t.id==='topManageBtn'){renderSiteMgmt();$('#siteModal').classList.add('on');return;}
+  $$('.role-tab').forEach(x=>{if(x.id!=='topManageBtn')x.classList.remove('on');});t.classList.add('on');
+  const r=t.dataset.role;
+  $$('.screen').forEach(s=>s.classList.remove('on'));
+  $('#screen-'+r).classList.add('on');
+  // 하단 네비(현황·발주·캘린더)는 항상 표시
+  $('#botnav').style.display='flex';
+  if(r==='site'){$('#whoLabel').innerHTML=DB.curSite;renderSite();}
+  else{renderVendor();$('#whoLabel').innerHTML=(curVendorCo||'협력업체')+' 자재팀';}
+});
+$$('#botnav button').forEach(b=>b.onclick=()=>{
+  // 협력업체 화면에 있으면 먼저 현장 화면으로 전환
+  $$('.role-tab').forEach(x=>{if(x.id!=='topManageBtn')x.classList.remove('on');});
+  document.querySelector('.role-tab[data-role="site"]').classList.add('on');
+  $$('.screen').forEach(s=>s.classList.remove('on'));
+  $('#screen-site').classList.add('on');
+  $$('#botnav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  $$('#screen-site .tab-pane').forEach(p=>p.classList.remove('on'));
+  $('#'+b.dataset.pane).classList.add('on');
+  $('#whoLabel').innerHTML=DB.curSite;
+  if(b.dataset.pane==='site-cal')renderCal();
+  else if(b.dataset.pane==='site-gantt')renderGantt();
+  else renderSite();
+});
+
+/* ============ 소장: 현장 칩 ============ */
+function renderSiteRow(){
+  const row=$('#siteRow');
+  row.innerHTML=DB.sites.map(s=>`<div class="site-chip ${s===DB.curSite?'on':''}" data-s="${s}">${s}</div>`).join('');
+  row.querySelectorAll('.site-chip[data-s]').forEach(c=>c.onclick=()=>{
+    DB.curSite=c.dataset.s;orderFilter=null;gcalY=null;gselDay=null;save();$('#whoLabel').innerHTML=DB.curSite;renderSite();
+  });
+}
+
+/* ===== 현장 관리 - 수정·삭제 ===== */
+function renderSiteMgmt(){
+  const wrap=$('#siteMgmtList');
+  if(DB.sites.length===0){wrap.innerHTML=`<div style="color:var(--sub);font-size:13px;text-align:center;padding:16px 0;">등록된 현장이 없어요</div>`;return;}
+  wrap.innerHTML=DB.sites.map((s,i)=>{
+    const cnt=DB.orders.filter(o=>o.site===s).length;
+    return `<div class="site-mgmt-row" data-idx="${i}" style="background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:700;">${s} ${s===DB.curSite?'<span style="color:var(--amber);font-size:11px;">● 현재</span>':''}</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:2px;">발주 ${cnt}건${siteDateBrief(s)}</div>
+        </div>
+        <button type="button" data-idx="${i}" class="siteEditBtn" style="min-width:48px;height:38px;border-radius:10px;background:#16304a;border:1px solid var(--blue);color:var(--blue);font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;">수정</button>
+        <button type="button" data-idx="${i}" class="siteDelBtn" style="min-width:54px;height:38px;border-radius:10px;background:#3a2530;border:1px solid var(--red);color:var(--red);font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;">삭제</button>
+      </div>
+      <div class="site-edit" style="display:none;flex-direction:column;gap:8px;margin-top:8px;">
+        <input class="se-input" value="${s}" placeholder="현장 이름" style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--txt);font-size:14px;font-family:inherit;">
+        <div style="display:flex;gap:6px;align-items:center;"><span style="font-size:11px;color:var(--sub);font-weight:700;width:62px;flex:0 0 auto;">현장소장</span><input class="se-mgr" value="${(DB.siteInfo[s]&&DB.siteInfo[s].manager)||''}" placeholder="예: 홍길동 소장" style="flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px;color:var(--txt);font-size:13px;font-family:inherit;"></div>
+        <div style="display:flex;gap:6px;align-items:center;"><span style="font-size:11px;color:var(--sub);font-weight:700;width:62px;flex:0 0 auto;">착공일</span><input class="se-start" type="date" value="${(DB.siteInfo[s]&&DB.siteInfo[s].start)||''}" style="flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px;color:var(--txt);font-size:13px;font-family:inherit;"></div>
+        <div style="display:flex;gap:6px;align-items:center;"><span style="font-size:11px;color:var(--sub);font-weight:700;width:62px;flex:0 0 auto;">특검예정</span><input class="se-special" type="date" value="${(DB.siteInfo[s]&&DB.siteInfo[s].special)||''}" style="flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px;color:var(--txt);font-size:13px;font-family:inherit;"></div>
+        <div style="display:flex;gap:6px;align-items:center;"><span style="font-size:11px;color:var(--sub);font-weight:700;width:62px;flex:0 0 auto;">준공예정</span><input class="se-end" type="date" value="${(DB.siteInfo[s]&&DB.siteInfo[s].end)||''}" style="flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px;color:var(--txt);font-size:13px;font-family:inherit;"></div>
+        <button type="button" data-idx="${i}" class="siteSaveBtn" style="height:40px;border-radius:10px;background:var(--green);border:none;color:#04130d;font-size:13px;font-weight:800;cursor:pointer;">저장</button>
+      </div>
+    </div>`;
+  }).join('');
+  // 수정 토글
+  wrap.querySelectorAll('.siteEditBtn').forEach(btn=>{
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      const box=this.closest('.site-mgmt-row').querySelector('.site-edit');
+      const open=box.style.display==='flex';
+      wrap.querySelectorAll('.site-edit').forEach(b=>b.style.display='none');
+      if(!open){box.style.display='flex';box.querySelector('.se-input').focus();}
+    });
+  });
+  // 수정 저장
+  wrap.querySelectorAll('.siteSaveBtn').forEach(btn=>{
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      const idx=+this.dataset.idx;
+      const box=this.closest('.site-edit');
+      const inp=box.querySelector('.se-input');
+      const dates={
+        manager:box.querySelector('.se-mgr')?box.querySelector('.se-mgr').value.trim():'',
+        start:box.querySelector('.se-start').value||'',
+        special:box.querySelector('.se-special').value||'',
+        end:box.querySelector('.se-end').value||''
+      };
+      saveSite(idx, inp.value.trim(), dates);
+    });
+  });
+  // 삭제
+  wrap.querySelectorAll('.siteDelBtn').forEach(btn=>{
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      const idx=+this.dataset.idx;
+      if(this.dataset.confirm==='1'){
+        delSite(idx);
+      }else{
+        wrap.querySelectorAll('.siteDelBtn').forEach(b=>{b.textContent='삭제';b.dataset.confirm='';b.style.background='#3a2530';b.style.color='var(--red)';});
+        this.textContent='확인';
+        this.dataset.confirm='1';
+        this.style.background='var(--red)';
+        this.style.color='#fff';
+      }
+    });
+  });
+}
+function siteDateBrief(s){
+  const d=DB.siteInfo[s];if(!d)return '';
+  const parts=[];
+  if(d.start)parts.push('착공 '+d.start);
+  if(d.end)parts.push('준공 '+d.end);
+  return parts.length?` · ${parts.join(' / ')}`:'';
+}
+function saveSite(idx, newName, dates){
+  const old=DB.sites[idx];
+  if(old===undefined)return;
+  if(!newName){toast('현장 이름을 입력하세요');return;}
+  let key=old;
+  let existing=DB.siteInfo[old]||{};
+  if(newName!==old){
+    if(DB.sites.includes(newName)){toast('이미 있는 현장이에요');return;}
+    DB.sites[idx]=newName;
+    DB.orders.forEach(o=>{if(o.site===old)o.site=newName;});
+    if(Array.isArray(DB.schedules))DB.schedules.forEach(s=>{if(s.site===old)s.site=newName;});
+    if(Array.isArray(DB.daylogs))DB.daylogs.forEach(l=>{if(l.site===old)l.site=newName;});
+    if(DB.siteInfo[old]){delete DB.siteInfo[old];}
+    if(DB.curSite===old)DB.curSite=newName;
+    key=newName;
+  }
+  DB.siteInfo[key]={manager:dates.manager||'', start:dates.start||'', special:dates.special||'', end:dates.end||''};
+  orderFilter=null;save();
+  renderSiteMgmt();renderSite();fillVendorSelects();
+  $('#whoLabel').innerHTML=DB.curSite;
+  toast('현장 정보를 저장했어요');
+}
+function renameSite(idx,newName){
+  const old=DB.sites[idx];
+  if(old===undefined)return;
+  if(!newName){toast('현장 이름을 입력하세요');return;}
+  if(newName===old){toast('이름이 같아요');return;}
+  if(DB.sites.includes(newName)){toast('이미 있는 현장이에요');return;}
+  DB.sites[idx]=newName;
+  // 이 현장의 발주·일정 소속도 함께 변경
+  DB.orders.forEach(o=>{if(o.site===old)o.site=newName;});
+  if(Array.isArray(DB.schedules))DB.schedules.forEach(s=>{if(s.site===old)s.site=newName;});
+  if(Array.isArray(DB.daylogs))DB.daylogs.forEach(l=>{if(l.site===old)l.site=newName;});
+  if(DB.siteInfo[old]){DB.siteInfo[newName]=DB.siteInfo[old];delete DB.siteInfo[old];}
+  if(DB.curSite===old)DB.curSite=newName;
+  orderFilter=null;save();
+  renderSiteMgmt();renderSite();fillVendorSelects();
+  $('#whoLabel').innerHTML=DB.curSite;
+  toast(`'${old}' → '${newName}' (으)로 변경됨`);
+}
+function delSite(idx){
+  const name=DB.sites[idx];
+  if(name===undefined)return;
+  DB.sites.splice(idx,1);
+  DB.orders=DB.orders.filter(o=>o.site!==name);
+  if(Array.isArray(DB.schedules))DB.schedules=DB.schedules.filter(s=>s.site!==name);
+  if(DB.siteInfo[name])delete DB.siteInfo[name];
+  if(DB.curSite===name)DB.curSite=DB.sites[0]||'';
+  orderFilter=null;save();renderSiteMgmt();renderSite();fillVendorSelects();
+  toast(`'${name}' 현장을 삭제했어요`);
+}
+$('#siteClose').onclick=()=>$('#siteModal').classList.remove('on');
+$('#goVendorMgmt').onclick=()=>{$('#siteModal').classList.remove('on');renderVendorMgmt();$('#vendorModal').classList.add('on');};
+$('#goMatMgmt').onclick=()=>{$('#siteModal').classList.remove('on');renderMatMgmt();$('#matModal').classList.add('on');};
+$('#nsAdd').onclick=()=>{
+  const n=$('#nsName').value.trim();
+  if(!n){toast('현장 이름을 입력하세요');return;}
+  if(DB.sites.includes(n)){toast('이미 있는 현장이에요');return;}
+  DB.sites.push(n);DB.curSite=n;orderFilter=null;save();
+  $('#nsName').value='';
+  renderSiteMgmt();renderSite();fillVendorSelects();
+  toast(`'${n}' 현장 추가됨`);
+};
+
+/* ============ 소장: 발주 현황 ============ */
+let orderFilter=null;  // null=전체, 'wait'/'confirmed'/'done'
+function renderOrders(){
+  const all=DB.orders.filter(o=>o.site===DB.curSite);
+  const nSoon=all.filter(o=>o.status==='confirmed').length;
+  const nDone=all.filter(o=>o.status==='done').length;
+  $('#cSoon').textContent=nSoon;
+  $('#cDone').textContent=nDone;
+
+  // 요약 박스 선택 표시
+  $$('.sm').forEach(s=>s.classList.toggle('sel',s.dataset.filter===orderFilter));
+  // 제목/전체보기 버튼
+  const labels={wait:'발주 대기',confirmed:'입고 예정',done:'입고 완료'};
+  $('#listTitle').textContent=orderFilter?`📋 ${labels[orderFilter]}`:'📋 발주 현황';
+  $('#clearFilter').classList.toggle('hidden',!orderFilter);
+
+  // 필터 적용
+  let list = orderFilter ? all.filter(o=>o.status===orderFilter) : all;
+
+  const wrap=$('#orderList');
+  if(list.length===0){
+    wrap.innerHTML=orderFilter
+      ? `<div class="empty"><div class="big">📭</div>해당하는 발주가 없어요</div>`
+      : `<div class="empty"><div class="big">📭</div>이 현장은 아직 발주가 없어요<br>아래 ➕발주 탭에서 등록해보세요</div>`;
+    return;
+  }
+  const ord={wait:0,confirmed:1,done:2};
+  list.sort((a,b)=>ord[a.status]-ord[b.status]||(a.deliver||a.want).localeCompare(b.deliver||b.want));
+  wrap.innerHTML=list.map(o=>`
+    <div class="order st-${o.status}">
+      <div class="order-top">
+        <div class="order-mat">${o.mat}<small>${o.qty.toLocaleString()}${o.unit} · ${o.vendor}</small></div>
+        <span class="stt ${STT[o.status].c}">${STT[o.status].t}</span>
+      </div>
+      <div class="order-info">
+        <span>희망 <b>${fmtDate(o.want)}</b></span>
+        ${o.status==='wait'
+          ? `<span style="color:var(--accent)">배송일 회신 대기중</span>`
+          : `<span class="date">입고 <b>${fmtDate(o.deliver)}</b> <span style="color:var(--sub)">${dday(o.deliver)}</span></span>`}
+        ${o.status==='confirmed'?`<button class="mini-btn" style="margin-left:auto;padding:4px 10px;font-size:12px;" onclick="markDone(${o.id})">입고완료</button>`:''}
+      </div>
+      ${o.memo?`<div class="order-site">📝 ${o.memo}</div>`:''}
+      <div class="order-actions">
+        <button class="oa-btn edit" onclick="openEdit(${o.id})">✏️ 수정</button>
+        <button class="oa-btn del" data-del="${o.id}" onclick="delOrder(${o.id},this)">🗑️ 삭제</button>
+      </div>
+    </div>`).join('');
+}
+// 요약 박스 클릭 → 필터 토글
+$$('.sm').forEach(s=>s.onclick=()=>{
+  const f=s.dataset.filter;
+  orderFilter = (orderFilter===f) ? null : f;  // 같은 거 다시 누르면 해제
+  renderOrders();
+});
+$('#clearFilter').onclick=()=>{orderFilter=null;renderOrders();};
+window.markDone=function(id){
+  const o=DB.orders.find(x=>x.id===id);if(!o)return;
+  o.status='done';if(!o.deliver)o.deliver=todayISO();save();renderSite();toast('입고 완료로 변경했어요 ✅');
+};
+
+/* ===== 발주 삭제 (2번 눌러 확인) ===== */
+window.delOrder=function(id,btn){
+  if(btn && btn.dataset.confirm==='1'){
+    DB.orders=DB.orders.filter(x=>x.id!==id);save();renderSite();toast('발주를 삭제했어요 🗑️');return;
+  }
+  document.querySelectorAll('.oa-btn.del').forEach(b=>{b.textContent='🗑️ 삭제';b.dataset.confirm='';b.classList.remove('confirm');});
+  if(btn){btn.textContent='확인';btn.dataset.confirm='1';btn.classList.add('confirm');}
+};
+
+/* ===== 발주 수정 ===== */
+let editId=null;
+function fillEditVendor(sel){
+  $('#eVendor').innerHTML=DB.vendors.length
+    ? DB.vendors.map(v=>`<option value="${v.id}" ${v.company===sel?'selected':''}>${v.company} · ${v.name} (${v.phone})</option>`).join('')
+    : `<option value="">담당자 없음</option>`;
+}
+window.openEdit=function(id){
+  const o=DB.orders.find(x=>x.id===id);if(!o)return;
+  editId=id;
+  $('#eMat').value=o.mat;$('#eQty').value=o.qty;$('#eUnit').value=o.unit;
+  $('#eWant').value=o.want||'';$('#eDeliver').value=o.deliver||'';
+  $('#eStatus').value=o.status;$('#eMemo').value=o.memo||'';
+  $('#matList').innerHTML=DB.materials.map(m=>`<option value="${m}">`).join('');
+  fillEditVendor(o.vendor);
+  $('#editModal').classList.add('on');
+};
+$('#eCancel').onclick=()=>{$('#editModal').classList.remove('on');editId=null;};
+$('#eSave').onclick=()=>{
+  const o=DB.orders.find(x=>x.id===editId);if(!o)return;
+  const mat=$('#eMat').value.trim(),qty=+$('#eQty').value;
+  if(!mat){toast('자재명을 입력하세요');return;}
+  if(!qty||qty<=0){toast('수량을 입력하세요');return;}
+  o.mat=mat;o.qty=qty;o.unit=$('#eUnit').value;
+  o.want=$('#eWant').value;o.memo=$('#eMemo').value.trim();
+  o.status=$('#eStatus').value;o.deliver=$('#eDeliver').value;
+  if((o.status==='confirmed'||o.status==='done')&&!o.deliver){o.deliver=o.want||todayISO();}
+  if(o.status==='wait')o.deliver='';
+  const v=DB.vendors.find(x=>x.id==$('#eVendor').value);
+  if(v){o.vendor=v.company;o.vendorName=v.name;o.vendorPhone=v.phone;}
+  // 수정한 자재명이 목록에 없으면 추가
+  if(mat&&!DB.materials.includes(mat))DB.materials.push(mat);
+  save();$('#editModal').classList.remove('on');editId=null;
+  renderSite();toast('발주를 수정했어요 ✏️');
+};
+
+/* ============ 소장: 발주 등록 폼 ============ */
+function fillVendorSelects(){
+  $('#fSite').innerHTML=DB.sites.length
+    ? DB.sites.map(s=>`<option ${s===DB.curSite?'selected':''}>${s}</option>`).join('')
+    : `<option value="">현장을 먼저 추가하세요</option>`;
+  $('#matList').innerHTML=DB.materials.map(m=>`<option value="${m}">`).join('');
+  $('#fVendor').innerHTML=DB.vendors.length
+    ? DB.vendors.map(v=>`<option value="${v.id}">${v.company} · ${v.name} (${v.phone})</option>`).join('')
+    : `<option value="">담당자를 먼저 등록하세요</option>`;
+}
+
+/* ===== 담당자(협력업체) 관리 - 수정·삭제 ===== */
+function renderVendorMgmt(){
+  const wrap=$('#vendorMgmtList');
+  if(DB.vendors.length===0){wrap.innerHTML=`<div style="color:var(--sub);font-size:13px;text-align:center;padding:16px 0;">등록된 담당자가 없어요</div>`;return;}
+  wrap.innerHTML=DB.vendors.map(v=>`
+    <div class="vendor-mgmt-row" data-id="${v.id}" style="background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:700;">${v.company}</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:2px;">${v.name} · ${v.phone}</div>
+        </div>
+        <a href="tel:${v.phone.replace(/-/g,'')}" style="width:38px;height:38px;border-radius:10px;background:var(--green);display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:16px;flex-shrink:0;">📞</a>
+        <button type="button" data-id="${v.id}" class="vendorEditBtn" style="min-width:48px;height:38px;border-radius:10px;background:#16304a;border:1px solid var(--blue);color:var(--blue);font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;">수정</button>
+        <button type="button" data-id="${v.id}" class="vendorDelBtn" style="min-width:54px;height:38px;border-radius:10px;background:#3a2530;border:1px solid var(--red);color:var(--red);font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;">삭제</button>
+      </div>
+      <div class="vendor-edit" style="display:none;flex-direction:column;gap:8px;margin-top:10px;">
+        <input class="ve-company" value="${v.company}" placeholder="회사명" style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--txt);font-size:14px;font-family:inherit;">
+        <input class="ve-name" value="${v.name}" placeholder="담당자 이름" style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--txt);font-size:14px;font-family:inherit;">
+        <input class="ve-phone" value="${v.phone}" placeholder="전화번호" type="tel" inputmode="tel" style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--txt);font-size:14px;font-family:inherit;">
+        <button type="button" data-id="${v.id}" class="vendorSaveBtn" style="height:40px;border-radius:10px;background:var(--green);border:none;color:#04130d;font-size:13px;font-weight:800;cursor:pointer;">💾 저장</button>
+      </div>
+    </div>`).join('');
+  // 수정 토글
+  wrap.querySelectorAll('.vendorEditBtn').forEach(btn=>{
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      const box=this.closest('.vendor-mgmt-row').querySelector('.vendor-edit');
+      const open=box.style.display==='flex';
+      wrap.querySelectorAll('.vendor-edit').forEach(b=>b.style.display='none');
+      if(!open){box.style.display='flex';box.querySelector('.ve-company').focus();}
+    });
+  });
+  // 수정 저장
+  wrap.querySelectorAll('.vendorSaveBtn').forEach(btn=>{
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      const id=+this.dataset.id;
+      const box=this.closest('.vendor-edit');
+      const c=box.querySelector('.ve-company').value.trim();
+      const n=box.querySelector('.ve-name').value.trim();
+      const p=box.querySelector('.ve-phone').value.trim();
+      if(!c||!n||!p){toast('회사명·이름·전화번호를 모두 입력하세요');return;}
+      const v=DB.vendors.find(x=>x.id===id);if(!v)return;
+      const oldCompany=v.company;
+      v.company=c;v.name=n;v.phone=p;
+      // 기존 발주의 협력업체 정보도 함께 갱신
+      DB.orders.forEach(o=>{
+        if(o.vendorName===v.name||o.vendor===oldCompany){
+          if(o.vendor===oldCompany)o.vendor=c;
+          o.vendorName=n;o.vendorPhone=p;
+        }
+      });
+      save();renderVendorMgmt();fillVendorSelects();
+      if(typeof renderVendor==='function')renderVendor();
+      toast('협력업체 정보를 수정했어요 ✏️');
+    });
+  });
+  // 삭제
+  wrap.querySelectorAll('.vendorDelBtn').forEach(btn=>{
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      const id=+this.dataset.id;
+      if(this.dataset.confirm==='1'){
+        DB.vendors=DB.vendors.filter(v=>v.id!==id);save();renderVendorMgmt();fillVendorSelects();toast('담당자를 삭제했어요');
+      }else{
+        wrap.querySelectorAll('.vendorDelBtn').forEach(b=>{b.textContent='삭제';b.dataset.confirm='';b.style.background='#3a2530';b.style.color='var(--red)';});
+        this.textContent='확인';this.dataset.confirm='1';this.style.background='var(--red)';this.style.color='#fff';
+      }
+    });
+  });
+}
+$('#mgmtVendorBtn').onclick=()=>{renderVendorMgmt();$('#vendorModal').classList.add('on');};
+$('#vendorClose').onclick=()=>$('#vendorModal').classList.remove('on');
+$('#resetData').onclick=()=>{
+  if(!confirm('모든 발주·현장 데이터를 기본값으로 초기화할까요? (되돌릴 수 없어요)'))return;
+  DB=clone(DEFAULT);orderFilter=null;save();
+  $('#vendorModal').classList.remove('on');
+  renderSite();toast('기본값으로 초기화했어요');
+};
+$('#nvAdd').onclick=()=>{
+  const c=$('#nvCompany').value.trim(),n=$('#nvName').value.trim(),p=$('#nvPhone').value.trim();
+  if(!c||!n||!p){toast('회사명·이름·전화번호를 모두 입력하세요');return;}
+  DB.vendors.push({id:Date.now(),company:c,name:n,phone:p});save();
+  $('#nvCompany').value='';$('#nvName').value='';$('#nvPhone').value='';
+  renderVendorMgmt();fillVendorSelects();toast(`${c} ${n} 담당자 추가됨`);
+};
+$('#matSaveBtn').onclick=()=>{
+  const v=$('#fMat').value.trim();
+  if(!v){toast('자재명을 입력하세요');return;}
+  if(!DB.materials.includes(v)){DB.materials.push(v);save();fillVendorSelects();toast(`'${v}' 자재 목록에 저장됨`);}
+  else toast('이미 목록에 있어요');
+};
+
+/* ===== 자재 목록 관리 (수정·삭제) ===== */
+function renderMatMgmt(){
+  const wrap=$('#matMgmtList');
+  if(DB.materials.length===0){wrap.innerHTML=`<div style="color:var(--sub);font-size:13px;text-align:center;padding:16px 0;">등록된 자재가 없어요</div>`;return;}
+  wrap.innerHTML=DB.materials.map((m,i)=>`
+    <div class="mat-mgmt-row" data-idx="${i}" style="background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="mm-name" style="flex:1;min-width:0;font-size:14px;font-weight:700;">${m}</div>
+        <button type="button" data-idx="${i}" class="matEditBtn" style="min-width:48px;height:38px;border-radius:10px;background:#16304a;border:1px solid var(--blue);color:var(--blue);font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;">수정</button>
+        <button type="button" data-idx="${i}" class="matDelBtn" style="min-width:54px;height:38px;border-radius:10px;background:#3a2530;border:1px solid var(--red);color:var(--red);font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;">삭제</button>
+      </div>
+      <div class="mm-edit" style="display:none;gap:8px;margin-top:8px;">
+        <input class="mm-edit-input" value="${m}" style="flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--txt);font-size:14px;font-family:inherit;">
+        <button type="button" data-idx="${i}" class="matRenameBtn" style="min-width:54px;height:40px;border-radius:10px;background:var(--green);border:none;color:#04130d;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;">저장</button>
+      </div>
+    </div>`).join('');
+  // 수정 토글
+  wrap.querySelectorAll('.matEditBtn').forEach(btn=>{
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      const box=this.closest('.mat-mgmt-row').querySelector('.mm-edit');
+      const open=box.style.display==='flex';
+      wrap.querySelectorAll('.mm-edit').forEach(b=>b.style.display='none');
+      if(!open){box.style.display='flex';box.querySelector('.mm-edit-input').focus();}
+    });
+  });
+  // 이름변경 저장
+  wrap.querySelectorAll('.matRenameBtn').forEach(btn=>{
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      const idx=+this.dataset.idx;
+      const inp=this.closest('.mm-edit').querySelector('.mm-edit-input');
+      renameMaterial(idx,inp.value.trim());
+    });
+  });
+  // 삭제
+  wrap.querySelectorAll('.matDelBtn').forEach(btn=>{
+    btn.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      const idx=+this.dataset.idx;
+      if(this.dataset.confirm==='1'){
+        DB.materials.splice(idx,1);save();renderMatMgmt();fillVendorSelects();toast('자재를 삭제했어요');
+      }else{
+        wrap.querySelectorAll('.matDelBtn').forEach(b=>{b.textContent='삭제';b.dataset.confirm='';b.style.background='#3a2530';b.style.color='var(--red)';});
+        this.textContent='확인';this.dataset.confirm='1';this.style.background='var(--red)';this.style.color='#fff';
+      }
+    });
+  });
+}
+function renameMaterial(idx,newName){
+  const old=DB.materials[idx];
+  if(old===undefined)return;
+  if(!newName){toast('자재명을 입력하세요');return;}
+  if(newName===old){toast('이름이 같아요');return;}
+  if(DB.materials.includes(newName)){toast('이미 있는 자재예요');return;}
+  DB.materials[idx]=newName;
+  // 기존 발주의 자재명도 함께 변경
+  DB.orders.forEach(o=>{if(o.mat===old)o.mat=newName;});
+  save();renderMatMgmt();fillVendorSelects();renderOrders();
+  toast(`'${old}' → '${newName}' (으)로 변경됨`);
+}
+{const _mb=$('#mgmtMatBtn');if(_mb)_mb.onclick=()=>{renderMatMgmt();$('#matModal').classList.add('on');};}
+$('#matClose').onclick=()=>$('#matModal').classList.remove('on');
+$('#nmAdd').onclick=()=>{
+  const n=$('#nmName').value.trim();
+  if(!n){toast('자재명을 입력하세요');return;}
+  if(DB.materials.includes(n)){toast('이미 있는 자재예요');return;}
+  DB.materials.push(n);save();$('#nmName').value='';
+  renderMatMgmt();fillVendorSelects();toast(`'${n}' 자재 추가됨`);
+};
+
+let pendingOrder=null, pendingVendor=null;
+$('#submitOrder').onclick=()=>{
+  const mat=$('#fMat').value.trim(),qty=+$('#fQty').value,want=$('#fWant').value;
+  const vId=$('#fVendor').value;
+  if(!$('#fSite').value){toast('현장을 먼저 추가하세요');return;}
+  if(!vId){toast('협력업체 담당자를 먼저 등록하세요');return;}
+  if(!mat){toast('자재명을 입력하세요');return;}
+  if(!qty||qty<=0){toast('수량을 입력하세요');return;}
+  if(!want){toast('희망 입고일을 선택하세요');return;}
+  const vendor=DB.vendors.find(v=>v.id==vId);
+  pendingVendor=vendor;
+  pendingOrder={
+    id:Date.now(), site:$('#fSite').value, mat, qty, unit:$('#fUnit').value,
+    vendor:vendor.company, vendorName:vendor.name, vendorPhone:vendor.phone,
+    want, memo:$('#fMemo').value.trim(),
+    status:'confirmed', deliver:want, created:'방금'
+  };
+  // 문자 미리보기
+  $('#smsTo').textContent=`${vendor.company} ${vendor.name}님에게 문자 전송`;
+  $('#smsRecv').textContent=`받는사람: ${vendor.name} (${vendor.phone})`;
+  $('#smsBody').textContent=
+`[자재 발주 요청 / ${pendingOrder.site}]
+자재: ${pendingOrder.mat}
+수량: ${qty.toLocaleString()}${pendingOrder.unit}
+희망입고: ${want}${pendingOrder.memo?'\n메모: '+pendingOrder.memo:''}
+
+배송 가능일 회신 부탁드립니다.
+- ${pendingOrder.site} 현장`;
+  $('#smsModal').classList.add('on');
+};
+$('#smsCancel').onclick=()=>{$('#smsModal').classList.remove('on');pendingOrder=null;};
+$('#smsConfirm').onclick=()=>{
+  if(!pendingOrder)return;
+  DB.orders.unshift(pendingOrder);save();
+  const phone=(pendingVendor?pendingVendor.phone:'').replace(/-/g,'');
+  const body=$('#smsBody').textContent;
+  const ua=navigator.userAgent;
+  const isMobile=/iPad|iPhone|iPod|Android/i.test(ua);
+  $('#smsModal').classList.remove('on');
+  // 폼 초기화
+  $('#fMat').value='';$('#fQty').value='';$('#fMemo').value='';$('#fWant').value='';
+  pendingOrder=null;
+  // 현황 탭으로 이동
+  $$('#botnav button').forEach(x=>x.classList.remove('on'));
+  document.querySelector('#botnav button[data-pane="site-list"]').classList.add('on');
+  $$('#screen-site .tab-pane').forEach(p=>p.classList.remove('on'));
+  $('#site-list').classList.add('on');
+  renderSite();
+
+  if(isMobile){
+    // 폰: 문자앱 열기
+    const isIOS=/iPad|iPhone|iPod/.test(ua);
+    const sep=isIOS?'&':'?';
+    toast('발주 등록 완료! 문자앱을 엽니다 📩');
+    setTimeout(()=>{location.href=`sms:${phone}${sep}body=${encodeURIComponent(body)}`;},300);
+  }else{
+    // PC: 문자앱이 없으므로 내용 복사
+    const full=`받는사람: ${pendingVendor?pendingVendor.phone:''}\n\n${body}`;
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(full).then(()=>{
+        toast('발주 등록 완료! PC라서 문자 내용을 복사했어요 📋');
+      }).catch(()=>{toast('발주 등록 완료! (폰에서 열면 문자앱이 떠요)');});
+    }else{
+      toast('발주 등록 완료! 폰에서 열면 문자앱이 자동으로 떠요');
+    }
+  }
+  pendingVendor=null;
+};
+
+/* ============ 캘린더 ============ */
+let calY,calM;
+let selDayIso=todayISO();      // 마지막으로 선택한 날짜
+function initCalDate(){const d=new Date();calY=d.getFullYear();calM=d.getMonth();}
+const SCH_ICON={공사:'🏗️',미팅:'🤝',점검:'✅',기타:'📌'};
+function renderCal(){
+  $('#calMonth').textContent=`${calY}년 ${calM+1}월`;
+  const grid=$('#calGrid');
+  const dows=['일','월','화','수','목','금','토'];
+  let html=dows.map((d,i)=>`<div class="cal-dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
+  const first=new Date(calY,calM,1).getDay();
+  const days=new Date(calY,calM+1,0).getDate();
+  for(let i=0;i<first;i++)html+=`<div class="cal-cell empty"></div>`;
+  const list=DB.orders.filter(o=>o.site===DB.curSite);
+  // 표준공정(gen:'std')은 공정표 탭에만 표시 → 일반 캘린더에서 제외
+  const schs=DB.schedules.filter(s=>s.site===DB.curSite && s.gen!=='std');
+  const logs=DB.daylogs.filter(l=>l.site===DB.curSite);
+  const phs=DB.phases.filter(p=>p.site===DB.curSite&&!p.parentId&&p.gen!=='std')
+    .slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(a.id-b.id));
+  // 겹치지 않으면 같은 줄 재사용
+  const _le=[];
+  phs.forEach(p=>{const e=phEnd(p);let lane=0;while(lane<_le.length && p.start<=_le[lane])lane++;_le[lane]=e;p._lane=lane;});
+  const phOnDay=iso=>phs.filter(p=>{const e=phEnd(p);return iso>=p.start&&iso<=e;});
+  const schOnDay=iso=>schs.filter(s=>{const a=s.date,b=s.end||s.date;return iso>=a&&iso<=b;});
+  const MAXBARS=3;
+  for(let d=1;d<=days;d++){
+    const iso=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow=new Date(calY,calM,d).getDay();
+    const dayOrders=list.filter(o=>(o.deliver||o.want)===iso);
+    const daySchs=schOnDay(iso);
+    const hasLog=logs.some(l=>l.date===iso);
+    const dayPhs=phOnDay(iso);
+    const isToday=iso===todayISO();
+    // 점: 발주/일정/일지 (공정은 막대로 분리)
+    let dots=[...new Set(dayOrders.map(o=>o.status))].map(s=>`<span class="dot ${s}"></span>`).join('');
+    if(daySchs.length)dots+=`<span class="dot sched"></span>`;
+    if(hasLog)dots+=`<span class="dot log"></span>`;
+    // 막대: 공정 기간 (레인 정렬, 최대 MAXBARS줄)
+    let bars='';
+    for(let lane=0;lane<MAXBARS;lane++){
+      const p=dayPhs.find(x=>x._lane===lane);
+      if(!p){bars+=`<div class="cbar" style="background:transparent;"></div>`;continue;}
+      const e=phEnd(p);
+      const isStart=(iso===p.start)||dow===0;       // 공정 시작 or 주 시작(일)
+      const isEnd=(iso===e)||dow===6;               // 공정 끝 or 주 끝(토)
+      const cls=`cbar ${isStart?'s':''} ${isEnd?'e':''}`;
+      const label=(iso===p.start||dow===0)?esc(p.name):'';  // 시작칸·주시작에만 이름
+      bars+=`<div class="${cls}" style="background:${p.color||'#3b82f6'};">${label}</div>`;
+    }
+    const has=dayOrders.length||daySchs.length||hasLog||dayPhs.length;
+    html+=`<div class="cal-cell ${has?'has':''} ${isToday?'today':''}" data-iso="${iso}">
+      <span class="dnum">${d}</span>
+      ${bars?`<div class="cal-bars">${bars}</div>`:''}
+      ${dots?`<div class="cal-dots">${dots}</div>`:''}
+    </div>`;
+  }
+  grid.innerHTML=html;
+  grid.querySelectorAll('.cal-cell[data-iso]').forEach(c=>c.onclick=()=>showDay(c.dataset.iso,c));
+  // 선택 표시 유지
+  const selCell=grid.querySelector(`.cal-cell[data-iso="${selDayIso}"]`);
+  if(selCell)showDay(selDayIso,selCell); else $('#dayDetail').innerHTML='';
+  refreshCommute();
+  renderLogList();
+}
+function showDay(iso,cell){
+  selDayIso=iso;
+  $$('.cal-cell').forEach(c=>c.classList.remove('sel'));if(cell)cell.classList.add('sel');
+  const orders=DB.orders.filter(o=>o.site===DB.curSite&&(o.deliver||o.want)===iso);
+  const schs=DB.schedules.filter(s=>s.site===DB.curSite&&s.gen!=='std'&&iso>=s.date&&iso<=(s.end||s.date));
+  const log=DB.daylogs.find(l=>l.site===DB.curSite&&l.date===iso);
+  const dayPhs=DB.phases.filter(p=>p.site===DB.curSite&&p.gen!=='std'&&iso>=p.start&&iso<=phEnd(p));
+  const d=new Date(iso);
+  let h=`<div class="dh" style="display:flex;align-items:center;gap:6px;">
+    <span>${d.getMonth()+1}월 ${d.getDate()}일</span>
+    <button onclick="openLog('${iso}')" style="margin-left:auto;background:var(--accent);border:none;border-radius:8px;color:#231400;font-size:11px;font-weight:800;padding:5px 10px;cursor:pointer;">${log?'📝 일지 수정':'📝 일지 쓰기'}</button>
+    <button onclick="openSchedule(null,'${iso}')" style="background:var(--amber);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:800;padding:5px 10px;cursor:pointer;">＋ 일정</button>
+  </div>`;
+  // 진행 중 공정 표시
+  if(dayPhs.length){
+    h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">`+dayPhs.map(p=>`<span class="chip" style="background:${p.color||'#3b82f6'}22;border:1px solid ${p.color||'#3b82f6'};color:var(--txt);border-radius:8px;padding:4px 9px;font-size:11.5px;font-weight:700;">📊 ${esc(p.name)}</span>`).join('')+`</div>`;
+  }
+  // 공사일지 카드
+  if(log){
+    const t=[]; if(log.tmax!=='')t.push(`최고 ${log.tmax}℃`); if(log.tmin!=='')t.push(`최저 ${log.tmin}℃`);
+    const meta=[`<span class="chip">${log.weather}</span>`];
+    if(t.length)meta.push(`<span class="chip">🌡️ ${t.join(' / ')}</span>`);
+    if(log.cin)meta.push(`<span class="chip">🌅 출근 ${log.cin}</span>`);
+    if(log.cout)meta.push(`<span class="chip">🌆 퇴근 ${log.cout}</span>`);
+    if(log.workers)meta.push(`<span class="chip">👷 ${log.workers}명</span>`);
+    h+=`<div class="log-card">
+      <div class="lc-top"><b>📝 공사일지</b>
+        <button class="edit" onclick="openLog('${iso}')">수정</button></div>
+      <div class="lc-meta">${meta.join('')}</div>
+      ${log.today?`<div class="lc-sec"><span class="k">금일 작업사항</span>${esc(log.today)}</div>`:''}
+      ${log.tomorrow?`<div class="lc-sec"><span class="k">명일 예정사항</span>${esc(log.tomorrow)}</div>`:''}
+      ${log.material?`<div class="lc-sec"><span class="k">자재·장비 투입</span>${esc(log.material)}</div>`:''}
+      ${log.note?`<div class="lc-sec"><span class="k">특기사항</span>${esc(log.note)}</div>`:''}
+      ${(log.photos&&log.photos.length)?`<div class="lc-sec"><span class="k">📷 현장 사진 (${log.photos.length})</span><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:4px;">${log.photos.map(s=>`<img src="${s}" style="width:100%;height:60px;object-fit:cover;border-radius:7px;border:1px solid var(--line);">`).join('')}</div></div>`:''}
+    </div>`;
+  }
+  if(orders.length===0&&schs.length===0&&!log&&dayPhs.length===0){
+    h+=`<div class="day-empty">이 날짜에 등록된 입고·일정이 없어요</div>`;
+  }else{
+    // 발주(입고) 항목
+    h+=orders.map(o=>`
+      <div class="order st-${o.status}">
+        <div class="order-top"><div class="order-mat">${o.mat}<small>${o.qty.toLocaleString()}${o.unit} · ${o.vendor}</small></div>
+        <span class="stt ${STT[o.status].c}">${STT[o.status].t}</span></div>
+      </div>`).join('');
+    // 직접 등록 일정
+    h+=schs.map(s=>{
+      const multi=s.end&&s.end!==s.date;
+      const period=multi?` · ${fmtDate(s.date)}~${fmtDate(s.end)}`:'';
+      return `
+      <div class="order" style="cursor:pointer;" onclick="openSchedule(${s.id})">
+        <div class="order-top">
+          <div class="order-mat">${SCH_ICON[s.type]||'📌'} ${s.title}<small>${s.type}${period}${s.memo?' · '+s.memo:''}</small></div>
+          <span class="stt" style="background:#2a2350;color:var(--purple);">${multi?'공사기간':'일정'}</span>
+        </div>
+      </div>`;}).join('');
+  }
+  $('#dayDetail').innerHTML=h;
+  // 날짜를 직접 탭했을 때만 공사일지 영역을 펼침 (초기 렌더 시엔 cell 없음)
+  if(cell){
+    const body=document.getElementById('boxDayDetail');
+    const btn=document.querySelector('.collapse-btn[data-toggle="boxDayDetail"]');
+    if(body&&!body.classList.contains('open')){body.classList.add('open');btn&&btn.classList.add('open');}
+  }
+}
+$('#calPrev').onclick=()=>{calM--;if(calM<0){calM=11;calY--;}renderCal();};
+$('#calNext').onclick=()=>{calM++;if(calM>11){calM=0;calY++;}renderCal();};
+
+/* ===== 일정 등록/수정/삭제 ===== */
+let schEditId=null;
+$('#addSchBtn2').onclick=()=>openSchedule(null, selDayIso||todayISO());
+window.openSchedule=function(id, dateIso){
+  if(id){
+    const s=DB.schedules.find(x=>x.id===id);if(!s)return;
+    schEditId=id;
+    $('#schTitle').textContent='✏️ 일정 수정';
+    $('#schDate').value=s.date;$('#schEnd').value=s.end||s.date;$('#schType').value=s.type;
+    $('#schTitleInput').value=s.title;$('#schMemo').value=s.memo||'';
+    $('#schDelete').style.display='block';
+  }else{
+    schEditId=null;
+    $('#schTitle').textContent='📅 일정 등록';
+    $('#schDate').value=dateIso||todayISO();$('#schEnd').value=dateIso||todayISO();$('#schType').value='공사';
+    $('#schTitleInput').value='';$('#schMemo').value='';
+    $('#schDelete').style.display='none';
+  }
+  $('#schModal').classList.add('on');
+};
+$('#schCancel').onclick=()=>{$('#schModal').classList.remove('on');schEditId=null;};
+$('#schSave').onclick=()=>{
+  const date=$('#schDate').value, type=$('#schType').value;
+  let end=$('#schEnd').value;
+  const title=$('#schTitleInput').value.trim(), memo=$('#schMemo').value.trim();
+  if(!date){toast('시작일을 선택하세요');return;}
+  if(!title){toast('일정 내용을 입력하세요');return;}
+  if(end&&end<date){toast('종료일이 시작일보다 빠릅니다');return;}
+  if(!end)end=date;
+  if(schEditId){
+    const s=DB.schedules.find(x=>x.id===schEditId);
+    if(s){s.date=date;s.end=end;s.type=type;s.title=title;s.memo=memo;}
+    toast('일정을 수정했어요 ✏️');
+  }else{
+    DB.schedules.push({id:Date.now(),site:DB.curSite,date,end,type,title,memo});
+    toast('일정을 등록했어요 📅');
+  }
+  selDayIso=date;save();$('#schModal').classList.remove('on');schEditId=null;renderCal();
+};
+$('#schDelete').onclick=()=>{
+  if(!schEditId)return;
+  DB.schedules=DB.schedules.filter(x=>x.id!==schEditId);
+  save();$('#schModal').classList.remove('on');schEditId=null;renderCal();toast('일정을 삭제했어요 🗑️');
+};
+
+/* ===== 출퇴근 + 공사일지 ===== */
+function esc(s){return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+function nowHM(){const d=new Date();return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
+function getLog(iso){return DB.daylogs.find(l=>l.site===DB.curSite&&l.date===iso);}
+function ensureLog(iso){
+  let l=getLog(iso);
+  if(!l){l={id:Date.now(),site:DB.curSite,date:iso,weather:'☀️ 맑음',tmax:'',tmin:'',cin:'',cout:'',workers:'',today:'',tomorrow:'',material:'',note:'',photos:[]};DB.daylogs.push(l);}
+  if(!Array.isArray(l.photos))l.photos=[];
+  return l;
+}
+// 출퇴근 버튼은 '오늘' 기준으로 기록
+function refreshCommute(){
+  const today=todayISO();
+  const l=getLog(today);
+  const inB=$('#cmIn'), outB=$('#cmOut');
+  if(!inB||!outB)return; // 출근/퇴근 버튼은 일지쓰기 안으로 이동됨
+  if(l&&l.cin){inB.classList.add('done');$('#cmInTm').textContent=l.cin;}
+  else{inB.classList.remove('done');$('#cmInTm').textContent='--:--';}
+  if(l&&l.cout){outB.classList.add('done');$('#cmOutTm').textContent=l.cout;}
+  else{outB.classList.remove('done');$('#cmOutTm').textContent='--:--';}
+}
+{const _ci=$('#cmIn');if(_ci)_ci.onclick=()=>{
+  const today=todayISO();const l=ensureLog(today);
+  if(l.cin){ if(!confirm(`이미 출근 기록(${l.cin})이 있어요.\n지금 시각(${nowHM()})으로 바꿀까요?`))return; }
+  l.cin=nowHM();save();refreshCommute();
+  if(selDayIso!==today)selDayIso=today;
+  renderCal();toast(`출근 기록 🌅 ${l.cin}`);
+};}
+{const _co=$('#cmOut');if(_co)_co.onclick=()=>{
+  const today=todayISO();const l=ensureLog(today);
+  if(l.cout){ if(!confirm(`이미 퇴근 기록(${l.cout})이 있어요.\n지금 시각(${nowHM()})으로 바꿀까요?`))return; }
+  l.cout=nowHM();save();refreshCommute();
+  if(selDayIso!==today)selDayIso=today;
+  renderCal();toast(`퇴근 기록 🌆 ${l.cout}`);
+};}
+
+// 일지 모달
+let logPhotos=[];  // 모달 작업 중 임시 사진 배열(base64)
+
+/* ===== 공종별 투입인원 ===== */
+const JOB_TYPES=['소장','용역','비계공','형틀공','철근공','콘·자재정리','조적공','석공','징크공','창호금속공','미장방수공','타일공','경량철골','도장공','내장목공','석고','도배공','부대토목','전기공','설비공'];
+// 금일/명일 작업사항 소제목 칩
+const SECT_CHIPS=['건축공사','토공','전기통신','소방','설비공사'];
+
+// 전날(이전 날짜) 일지의 공종별 '계'를 전일누계로 사용
+function prevManning(iso){
+  const logs=DB.daylogs.filter(l=>l.site===DB.curSite&&l.date<iso).sort((a,b)=>a.date<b.date?1:-1);
+  const prev=logs[0];
+  const out={};
+  if(prev&&prev.manning){JOB_TYPES.forEach(j=>{const m=prev.manning[j];out[j]=m?((+m.prev||0)+(+m.today||0)):0;});}
+  else JOB_TYPES.forEach(j=>out[j]=0);
+  return out;
+}
+function renderManning(iso, saved){
+  const prevTot=prevManning(iso);
+  const wrap=$('#lgManning');
+  wrap.innerHTML=JOB_TYPES.map(j=>{
+    const sv=saved&&saved[j]?saved[j]:null;
+    const prev=sv?(+sv.prev||0):(prevTot[j]||0);
+    const today=sv?(sv.today||''):'';
+    return `<div class="manning-row" data-job="${esc(j)}">
+      <span class="mr-job">${esc(j)}</span>
+      <span class="mr-prev" data-prev="${prev}">${prev}</span>
+      <input type="number" inputmode="numeric" class="mr-today" min="0" placeholder="0" value="${today!==''?today:''}">
+      <span class="mr-sum">${prev+(+today||0)}</span>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('.manning-row').forEach(row=>{
+    const inp=row.querySelector('.mr-today');
+    inp.oninput=()=>updateManningRow(row);
+  });
+  updateManningTotal();
+}
+function updateManningRow(row){
+  const prev=+row.querySelector('.mr-prev').dataset.prev||0;
+  const today=+row.querySelector('.mr-today').value||0;
+  row.querySelector('.mr-sum').textContent=prev+today;
+  updateManningTotal();
+}
+function updateManningTotal(){
+  let p=0,t=0;
+  $('#lgManning').querySelectorAll('.manning-row').forEach(row=>{
+    p+=+row.querySelector('.mr-prev').dataset.prev||0;
+    t+=+row.querySelector('.mr-today').value||0;
+  });
+  $('#mtPrev').textContent=p;
+  $('#mtToday').textContent=t;
+  $('#mtSum').textContent=p+t;
+  const b=$('#manningBtnSum');if(b)b.textContent=t+'명';
+}
+function collectManning(){
+  const out={};
+  $('#lgManning').querySelectorAll('.manning-row').forEach(row=>{
+    const j=row.dataset.job;
+    const prev=+row.querySelector('.mr-prev').dataset.prev||0;
+    const today=row.querySelector('.mr-today').value.trim();
+    if(today!==''||prev>0)out[j]={prev:prev,today:today===''?0:(+today||0)};
+  });
+  return out;
+}
+function manningTodaySum(m){if(!m)return 0;let s=0;JOB_TYPES.forEach(j=>{if(m[j])s+=+m[j].today||0;});return s;}
+
+/* ===== 접기/펼치기 토글 ===== */
+function setupCollapse(btnId, boxId){
+  const btn=$('#'+btnId), box=$('#'+boxId);
+  if(!btn||btn.dataset.bound)return;
+  btn.dataset.bound='1';
+  btn.onclick=()=>{
+    const open=box.style.display!=='none';
+    box.style.display=open?'none':'block';
+    btn.classList.toggle('open',!open);
+  };
+}
+function collapseClose(btnId, boxId){
+  const btn=$('#'+btnId), box=$('#'+boxId);
+  if(box)box.style.display='none';
+  if(btn)btn.classList.remove('open');
+}
+
+/* ===== 금일/명일 작업사항 — 줄 리스트(삭제 가능) ===== */
+// 데이터: lines = [{type:'head'|'text', text:'...'}]
+let workLines={today:[], tomorrow:[]};
+function addWorkLine(target, type, text){
+  workLines[target].push({type:type, text:text});
+  renderWorkList(target);
+}
+function renderWorkList(target){
+  const box=$('#'+target+'List');
+  box.innerHTML=workLines[target].map((ln,i)=>`
+    <div class="work-line ${ln.type==='head'?'head':''}">
+      <span class="wl-txt">${ln.type==='head'?'■ ':''}${esc(ln.text)}</span>
+      <button type="button" class="wl-del" data-t="${target}" data-i="${i}">×</button>
+    </div>`).join('');
+  box.querySelectorAll('.wl-del').forEach(b=>{
+    b.onclick=()=>{const t=b.dataset.t,i=+b.dataset.i;workLines[t].splice(i,1);renderWorkList(t);};
+  });
+}
+// 자유 입력 textarea의 현재 내용을 한 줄로 리스트에 추가
+function pushFreeText(target){
+  const ta=$('#lg'+(target==='today'?'Today':'Tomorrow'));
+  const v=ta.value.trim();
+  if(v){addWorkLine(target,'text',v);ta.value='';}
+}
+// 저장 시 리스트+잔여 텍스트를 합쳐 문자열로
+function buildWorkText(target){
+  pushFreeText(target);
+  return workLines[target].map(ln=>(ln.type==='head'?'■ ':'')+ln.text).join('\n');
+}
+// 저장된 문자열 → 줄 리스트 복원
+function parseWorkText(str){
+  const lines=[];
+  (str||'').split('\n').forEach(raw=>{
+    const t=raw.replace(/\s+$/,'');
+    if(t==='')return;
+    if(t.startsWith('■ '))lines.push({type:'head',text:t.slice(2).trim()});
+    else if(t.startsWith('■'))lines.push({type:'head',text:t.slice(1).trim()});
+    else lines.push({type:'text',text:t});
+  });
+  return lines;
+}
+
+/* ===== 자재/장비 표 ===== */
+function prevMaterials(iso){
+  const logs=DB.daylogs.filter(l=>l.site===DB.curSite&&l.date<iso).sort((a,b)=>a.date<b.date?1:-1);
+  const prev=logs[0];
+  const out={};
+  if(prev&&Array.isArray(prev.matRows)){
+    prev.matRows.forEach(r=>{if(r.name)out[r.name]=(+r.prev||0)+(+r.today||0);});
+  }
+  return out;
+}
+let matPrevMap={};
+function renderMatRows(iso, savedRows){
+  matPrevMap=prevMaterials(iso);
+  const wrap=$('#lgMatRows');
+  let rows=[];
+  if(Array.isArray(savedRows)&&savedRows.length){
+    rows=savedRows.map(r=>({name:r.name||'', prev:+r.prev||(matPrevMap[r.name]||0), today:r.today===''?'':(+r.today||0)}));
+  }else{
+    // 전날 자재가 있으면 그 항목들을 누계로 미리 채움
+    rows=Object.keys(matPrevMap).map(n=>({name:n, prev:matPrevMap[n], today:''}));
+  }
+  wrap.innerHTML=rows.map((r,i)=>matRowHTML(r,i)).join('');
+  bindMatRows();
+  updateMatBtn();
+}
+function matRowHTML(r,i){
+  const prev=+r.prev||0, today=r.today===''?'':(+r.today||0);
+  return `<div class="mat-row" data-i="${i}">
+    <input class="mr-name" type="text" placeholder="자재 / 장비명" value="${esc(r.name||'')}">
+    <span class="mr-prev2" data-prev="${prev}">${prev}</span>
+    <input class="mr-num mr-today2" type="number" inputmode="numeric" min="0" placeholder="0" value="${today!==''?today:''}">
+    <span class="mr-sum2">${prev+(+today||0)}</span>
+    <button type="button" class="mr-del-btn">삭제</button>
+  </div>`;
+}
+function bindMatRows(){
+  $('#lgMatRows').querySelectorAll('.mat-row').forEach(row=>{
+    const nameI=row.querySelector('.mr-name');
+    const todayI=row.querySelector('.mr-today2');
+    nameI.oninput=()=>{
+      // 이름을 전날 자재와 맞추면 누계 자동 반영
+      const n=nameI.value.trim();
+      const prevSpan=row.querySelector('.mr-prev2');
+      const auto=matPrevMap[n]||0;
+      prevSpan.dataset.prev=auto;prevSpan.textContent=auto;
+      updateMatRow(row);
+    };
+    todayI.oninput=()=>updateMatRow(row);
+    row.querySelector('.mr-del-btn').onclick=()=>{row.remove();updateMatBtn();};
+  });
+}
+function updateMatRow(row){
+  const prev=+row.querySelector('.mr-prev2').dataset.prev||0;
+  const today=+row.querySelector('.mr-today2').value||0;
+  row.querySelector('.mr-sum2').textContent=prev+today;
+  updateMatBtn();
+}
+function updateMatBtn(){
+  let cnt=0;
+  $('#lgMatRows').querySelectorAll('.mat-row').forEach(row=>{
+    const n=row.querySelector('.mr-name').value.trim();
+    const today=+row.querySelector('.mr-today2').value||0;
+    if(n&&(today>0||+row.querySelector('.mr-prev2').dataset.prev>0))cnt++;
+  });
+  const b=$('#matBtnSum');if(b)b.textContent=cnt+'건';
+}
+function collectMatRows(){
+  const out=[];
+  $('#lgMatRows').querySelectorAll('.mat-row').forEach(row=>{
+    const name=row.querySelector('.mr-name').value.trim();
+    const prev=+row.querySelector('.mr-prev2').dataset.prev||0;
+    const today=row.querySelector('.mr-today2').value.trim();
+    if(name)out.push({name:name, prev:prev, today:today===''?0:(+today||0)});
+  });
+  return out;
+}
+function matRowsToText(rows){
+  if(!Array.isArray(rows)||!rows.length)return '';
+  return rows.filter(r=>r.name).map(r=>{
+    const sum=(+r.prev||0)+(+r.today||0);
+    return `${r.name} ${sum}`+((+r.prev||0)>0?` (금일 ${+r.today||0})`:'');
+  }).join(', ');
+}
+
+// 소제목 칩 렌더 (한 번만) — 탭하면 작업 리스트에 소제목 줄 추가
+function renderSectChips(){
+  document.querySelectorAll('.sect-chips').forEach(box=>{
+    if(box.dataset.built)return;
+    box.dataset.built='1';
+    const target=box.dataset.target;
+    box.innerHTML=SECT_CHIPS.map(s=>`<button type="button" class="sc">${s}</button>`).join('');
+    box.querySelectorAll('.sc').forEach((btn,i)=>{
+      btn.onclick=()=>{pushFreeText(target);addWorkLine(target,'head',SECT_CHIPS[i]);};
+    });
+  });
+}
+
+// textarea에서 엔터로 줄 확정 → 리스트에 추가
+['today','tomorrow'].forEach(target=>{
+  const ta=document.getElementById('lg'+(target==='today'?'Today':'Tomorrow'));
+  // 바인딩은 openLog 후에도 동일 요소이므로 한 번만
+});
+
+$('#writeLogBtn').onclick=()=>openLog(selDayIso||todayISO());
+function fmtMD(d){if(!d)return '-';const p=d.split('-');return p.length===3?`${+p[1]}/${+p[2]}`:d;}
+function ddayTxt(target, base){
+  if(!target)return '';
+  const a=new Date(base+'T00:00:00'), b=new Date(target+'T00:00:00');
+  const diff=Math.round((b-a)/86400000);
+  if(diff===0)return ' (D-day)';
+  return diff>0?` (D-${diff})`:` (D+${-diff})`;
+}
+function renderSiteDates(iso){
+  const box=$('#lgSiteDates');if(!box)return;
+  const d=DB.siteInfo[DB.curSite]||{};
+  const nm=$('#lgSiteName');if(nm)nm.textContent=DB.curSite||'-';
+  const mg=$('#lgSiteMgr');if(mg)mg.textContent=d.manager||'-';
+  box.className='site-dates';
+  const hasAny=d.start||d.special||d.end;
+  box.innerHTML=`
+    <div class="sd start"><div class="sd-l">착공일</div><div class="sd-v">${d.start?fmtMD(d.start):'-'}</div></div>
+    <div class="sd special"><div class="sd-l">특검예정</div><div class="sd-v">${d.special?fmtMD(d.special)+ddayTxt(d.special,iso):'-'}</div></div>
+    <div class="sd end"><div class="sd-l">준공예정</div><div class="sd-v">${d.end?fmtMD(d.end)+ddayTxt(d.end,iso):'-'}</div></div>`
+    +(hasAny?'':`<div class="sd-hint">아래 ✏️ 현장정보 수정에서 날짜를 입력하세요</div>`);
+}
+
+/* ===== 현장정보 수정 팝업 ===== */
+$('#lgSiteEditBtn').onclick=()=>{
+  const d=DB.siteInfo[DB.curSite]||{};
+  $('#siInfoSub').textContent=`현장: ${DB.curSite}`;
+  $('#siName').value=DB.curSite||'';
+  $('#siMgr').value=d.manager||'';
+  $('#siStart').value=d.start||'';
+  $('#siSpecial').value=d.special||'';
+  $('#siEnd').value=d.end||'';
+  $('#siSave').dataset.old=DB.curSite;
+  $('#siteInfoModal').classList.add('on');
+};
+$('#siCancel').onclick=()=>$('#siteInfoModal').classList.remove('on');
+$('#siSave').onclick=()=>{
+  const old=$('#siSave').dataset.old;
+  const newName=$('#siName').value.trim();
+  if(!newName){toast('현장 이름을 입력하세요');return;}
+  if(newName!==old){
+    if(DB.sites.includes(newName)){toast('이미 있는 현장이에요');return;}
+    const idx=DB.sites.indexOf(old);
+    if(idx>=0)DB.sites[idx]=newName;
+    DB.orders.forEach(o=>{if(o.site===old)o.site=newName;});
+    if(Array.isArray(DB.schedules))DB.schedules.forEach(s=>{if(s.site===old)s.site=newName;});
+    if(Array.isArray(DB.daylogs))DB.daylogs.forEach(l=>{if(l.site===old)l.site=newName;});
+    if(DB.siteInfo[old]){DB.siteInfo[newName]=DB.siteInfo[old];delete DB.siteInfo[old];}
+    if(DB.curSite===old)DB.curSite=newName;
+  }
+  const cur=DB.siteInfo[newName]||{};
+  cur.manager=$('#siMgr').value.trim();
+  cur.start=$('#siStart').value||'';
+  cur.special=$('#siSpecial').value||'';
+  cur.end=$('#siEnd').value||'';
+  DB.siteInfo[newName]=cur;
+  save();
+  $('#siteInfoModal').classList.remove('on');
+  renderSiteDates($('#lgDate').value||todayISO());
+  renderSite();
+  const wl=$('#whoLabel');if(wl)wl.innerHTML=DB.curSite;
+  toast('현장정보를 저장했어요 🏗️');
+};
+window.openLog=function(iso){
+  iso=iso||todayISO();
+  const l=getLog(iso);
+  $('#logTitle').textContent=l?'✏️ 공사일지 수정':'📝 공사일지 작성';
+  $('#lgDate').value=iso;
+  renderSiteDates(iso);
+  $('#lgWeather').value=l?l.weather:'☀️ 맑음';
+  $('#lgTmax').value=l?l.tmax:''; $('#lgTmin').value=l?l.tmin:'';
+  $('#lgIn').value=l?l.cin:''; $('#lgOut').value=l?l.cout:'';
+  renderSectChips();
+  renderManning(iso, l?l.manning:null);
+  // 작업사항 줄 리스트 복원
+  workLines.today=parseWorkText(l?l.today:'');
+  workLines.tomorrow=parseWorkText(l?l.tomorrow:'');
+  renderWorkList('today');renderWorkList('tomorrow');
+  $('#lgToday').value=''; $('#lgTomorrow').value='';
+  // 자재/장비 표
+  renderMatRows(iso, l?l.matRows:null);
+  // 접기 영역 초기 상태(닫힘)
+  setupCollapse('manningToggle','manningBox');
+  setupCollapse('matToggle','matBox');
+  collapseClose('manningToggle','manningBox');
+  collapseClose('matToggle','matBox');
+  bindWorkEnter();
+  $('#lgNote').value=l?l.note:'';
+  logPhotos=(l&&Array.isArray(l.photos))?l.photos.slice():[];
+  renderLogPhotos();
+  $('#lgDelete').style.display=l?'block':'none';
+  $('#logModal').classList.add('on');
+};
+function renderLogPhotos(){
+  const g=$('#lgPhotoGrid');if(!g)return;
+  g.innerHTML=logPhotos.map((src,i)=>`<div style="position:relative;">
+      <img src="${src}" style="width:100%;height:70px;object-fit:cover;border-radius:9px;border:1px solid var(--line);">
+      <button type="button" onclick="rmLogPhoto(${i})" style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);border:none;color:#fff;font-size:12px;font-weight:800;cursor:pointer;line-height:1;">×</button>
+    </div>`).join('');
+}
+window.rmLogPhoto=function(i){logPhotos.splice(i,1);renderLogPhotos();};
+
+// 자재/장비 행 추가
+{const _ar=$('#matAddRow');if(_ar)_ar.onclick=()=>{
+  const wrap=$('#lgMatRows');
+  const i=wrap.querySelectorAll('.mat-row').length;
+  wrap.insertAdjacentHTML('beforeend', matRowHTML({name:'',prev:0,today:''}, i));
+  bindMatRows();
+  const last=wrap.querySelector('.mat-row:last-child .mr-name');if(last)last.focus();
+};}
+// 작업사항 textarea 엔터 → 줄 확정
+let _workEnterBound=false;
+function bindWorkEnter(){
+  if(_workEnterBound)return;_workEnterBound=true;
+  [['today','lgToday'],['tomorrow','lgTomorrow']].forEach(([target,id])=>{
+    const ta=$('#'+id);if(!ta)return;
+    ta.addEventListener('keydown',(e)=>{
+      if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();pushFreeText(target);}
+    });
+  });
+}
+$('#lgPhotoBtn').onclick=()=>$('#lgPhotoInput').click();
+$('#lgPhotoInput').onchange=(e)=>{
+  const files=[...(e.target.files||[])];
+  let done=0;
+  files.forEach(f=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      compressImage(ev.target.result, 1024, 0.7, (out)=>{
+        logPhotos.push(out);done++;
+        if(done===files.length){renderLogPhotos();toast(`사진 ${files.length}장 추가됨 📷`);}
+      });
+    };
+    reader.readAsDataURL(f);
+  });
+  e.target.value=''; // 같은 파일 다시 선택 가능하게
+};
+// 사진 용량 줄이기(긴변 maxW px, 품질 q) → base64 jpeg
+function compressImage(dataUrl, maxW, q, cb){
+  const img=new Image();
+  img.onload=()=>{
+    let w=img.width,h=img.height;
+    if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    cb(c.toDataURL('image/jpeg',q));
+  };
+  img.onerror=()=>cb(dataUrl);
+  img.src=dataUrl;
+}
+$('#lgCancel').onclick=()=>$('#logModal').classList.remove('on');
+$('#lgSave').onclick=()=>{
+  const iso=$('#lgDate').value;
+  if(!iso){toast('일자를 선택하세요');return;}
+  const l=ensureLog(iso);
+  l.date=iso;
+  l.weather=$('#lgWeather').value;
+  l.tmax=$('#lgTmax').value.trim(); l.tmin=$('#lgTmin').value.trim();
+  l.cin=$('#lgIn').value; l.cout=$('#lgOut').value;
+  l.manning=collectManning();
+  l.workers=manningTodaySum(l.manning); // 금일 총 투입(요약·PDF 호환)
+  l.today=buildWorkText('today'); l.tomorrow=buildWorkText('tomorrow');
+  l.matRows=collectMatRows();
+  l.material=matRowsToText(l.matRows); // 요약·문자 호환용 문자열
+  l.note=$('#lgNote').value.trim();
+  l.photos=logPhotos.slice();
+  selDayIso=iso;save();$('#logModal').classList.remove('on');renderCal();toast('공사일지를 저장했어요 📝');
+};
+$('#lgDelete').onclick=()=>{
+  const iso=$('#lgDate').value;
+  if(!confirm('이 날짜의 공사일지를 삭제할까요?'))return;
+  DB.daylogs=DB.daylogs.filter(l=>!(l.site===DB.curSite&&l.date===iso));
+  save();$('#logModal').classList.remove('on');renderCal();toast('공사일지를 삭제했어요 🗑️');
+};
+
+/* ===== 공사일지 목록 ===== */
+function fmtFull(iso){const p=iso.split('-');const d=new Date(+p[0],+p[1]-1,+p[2]);const w=['일','월','화','수','목','금','토'][d.getDay()];return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}(${w})`;}
+let logOpenMonths={};   // 'YYYY-MM' → 펼침 여부
+let logOpenRows={};     // 'YYYY-MM-DD' → 상세 펼침 여부
+function renderLogList(){
+  const box=$('#logList');if(!box)return;
+  const logs=DB.daylogs.filter(l=>l.site===DB.curSite).slice().sort((a,b)=>b.date<a.date?-1:1);
+  const logCnt=$('#logCnt');if(logCnt)logCnt.textContent=logs.length;
+  if(!logs.length){box.innerHTML=`<div class="log-empty">아직 작성한 공사일지가 없어요.<br>위 <b style="color:var(--accent)">📝 일지쓰기</b>로 첫 일지를 남겨보세요.</div>`;return;}
+  // 월별 그룹
+  const months=[];const mmap={};
+  logs.forEach(l=>{
+    const mk=l.date.slice(0,7); // YYYY-MM
+    if(!mmap[mk]){mmap[mk]=[];months.push(mk);}
+    mmap[mk].push(l);
+  });
+  // 기본: 가장 최근 달만 펼침(처음 렌더 시)
+  if(Object.keys(logOpenMonths).length===0 && months.length){logOpenMonths[months[0]]=true;}
+  box.innerHTML=months.map(mk=>{
+    const ym=mk.split('-');const title=`${+ym[0]}년 ${+ym[1]}월`;
+    const open=!!logOpenMonths[mk];
+    const rows=mmap[mk].map(l=>logLineHTML(l)).join('');
+    return `<div class="logmon">
+      <button type="button" class="logmon-head ${open?'open':''}" data-mon="${mk}">
+        <span class="lm-t">${title}</span>
+        <span class="lm-c">${mmap[mk].length}건</span>
+        <span class="lm-arr">▼</span>
+      </button>
+      <div class="logmon-body ${open?'open':''}" data-mon="${mk}">${rows}</div>
+    </div>`;
+  }).join('');
+  // 월 헤더 토글
+  box.querySelectorAll('.logmon-head').forEach(h=>{
+    h.onclick=()=>{
+      const mk=h.dataset.mon;logOpenMonths[mk]=!logOpenMonths[mk];
+      h.classList.toggle('open',logOpenMonths[mk]);
+      box.querySelector(`.logmon-body[data-mon="${mk}"]`).classList.toggle('open',logOpenMonths[mk]);
+    };
+  });
+  bindLogLines(box);
+}
+function logSummary(l){
+  // 첫 작업줄(소제목 제외) 또는 인원으로 한 줄 요약
+  let first='';
+  if(l.today){
+    const lines=l.today.split('\n').map(s=>s.trim()).filter(Boolean);
+    const body=lines.find(s=>!s.startsWith('■'));
+    first=body||lines[0]||'';
+  }
+  const w=l.workers?`👷${l.workers}명`:'';
+  return [w,first].filter(Boolean).join(' · ')||'(내용 없음)';
+}
+function logLineHTML(l){
+  const open=!!logOpenRows[l.date];
+  const wk=l.date.split('-');const dd=`${+wk[1]}/${+wk[2]}`;
+  const dow=['일','월','화','수','목','금','토'][new Date(l.date+'T00:00:00').getDay()];
+  return `<div class="logline">
+    <div class="logline-top ${open?'open':''}" data-d="${l.date}">
+      <span class="ll-d">${dd}(${dow})</span>
+      <span class="ll-w">${l.weather||''}</span>
+      <span class="ll-sum">${esc(logSummary(l))}</span>
+      <span class="ll-arr">▼</span>
+    </div>
+    <div class="logline-detail ${open?'open':''}" data-d="${l.date}">
+      ${l.today?`<div class="lld-sec"><span class="k">금일 작업사항</span>${esc(l.today)}</div>`:''}
+      ${l.tomorrow?`<div class="lld-sec"><span class="k">명일 예정사항</span>${esc(l.tomorrow)}</div>`:''}
+      ${l.material?`<div class="lld-sec"><span class="k">자재·장비</span>${esc(l.material)}</div>`:''}
+      ${l.note?`<div class="lld-sec"><span class="k">특기사항</span>${esc(l.note)}</div>`:''}
+      <div class="lld-btns">
+        <button class="lr-edit" onclick="event.stopPropagation();openLog('${l.date}')">✏️ 보기·수정</button>
+        <button class="lr-send" onclick="event.stopPropagation();openSend('${l.date}')">📄 PDF 보내기</button>
+      </div>
+    </div>
+  </div>`;
+}
+function bindLogLines(box){
+  box.querySelectorAll('.logline-top').forEach(t=>{
+    t.onclick=()=>{
+      const d=t.dataset.d;logOpenRows[d]=!logOpenRows[d];
+      t.classList.toggle('open',logOpenRows[d]);
+      const det=t.parentElement.querySelector('.logline-detail');
+      if(det)det.classList.toggle('open',logOpenRows[d]);
+    };
+  });
+}
+
+/* ===== 공사일지 PDF 생성 ===== */
+function manningTableHTML(l){
+  if(!l.manning||!Object.keys(l.manning).length)return l.workers?(esc(String(l.workers))+' 명'):'-';
+  let p=0,t=0,rows='';
+  JOB_TYPES.forEach(j=>{
+    const m=l.manning[j];if(!m)return;
+    const prev=+m.prev||0, today=+m.today||0;
+    if(prev===0&&today===0)return;
+    p+=prev;t+=today;
+    rows+=`<tr>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;">${esc(j)}</td>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;text-align:center;">${prev}</td>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;text-align:center;">${today}</td>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;text-align:center;font-weight:700;">${prev+today}</td>
+    </tr>`;
+  });
+  if(!rows)return '-';
+  return `<table style="width:100%;border-collapse:collapse;">
+    <tr style="background:#fbe9c8;">
+      <th style="border:1px solid #d9b96a;padding:4px 8px;font-size:11px;color:#5a4413;">공종</th>
+      <th style="border:1px solid #d9b96a;padding:4px 8px;font-size:11px;color:#5a4413;">전일누계</th>
+      <th style="border:1px solid #d9b96a;padding:4px 8px;font-size:11px;color:#5a4413;">금일</th>
+      <th style="border:1px solid #d9b96a;padding:4px 8px;font-size:11px;color:#5a4413;">계</th>
+    </tr>
+    ${rows}
+    <tr style="background:#fff6e3;font-weight:800;">
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#5a4413;">합계</td>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;text-align:center;">${p}</td>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;text-align:center;">${t}</td>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;text-align:center;">${p+t}</td>
+    </tr>
+  </table>`;
+}
+function materialTableHTML(l){
+  const rows=Array.isArray(l.matRows)?l.matRows.filter(r=>r.name):[];
+  if(!rows.length)return l.material?esc(l.material):'-';
+  let body='';
+  rows.forEach(r=>{
+    const prev=+r.prev||0, today=+r.today||0;
+    body+=`<tr>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;">${esc(r.name)}</td>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;text-align:center;">${prev}</td>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;text-align:center;">${today}</td>
+      <td style="border:1px solid #d9b96a;padding:4px 8px;font-size:12px;color:#111;text-align:center;font-weight:700;">${prev+today}</td>
+    </tr>`;
+  });
+  return `<table style="width:100%;border-collapse:collapse;">
+    <tr style="background:#fbe9c8;">
+      <th style="border:1px solid #d9b96a;padding:4px 8px;font-size:11px;color:#5a4413;">자재 / 장비명</th>
+      <th style="border:1px solid #d9b96a;padding:4px 8px;font-size:11px;color:#5a4413;">전일누계</th>
+      <th style="border:1px solid #d9b96a;padding:4px 8px;font-size:11px;color:#5a4413;">금일</th>
+      <th style="border:1px solid #d9b96a;padding:4px 8px;font-size:11px;color:#5a4413;">계</th>
+    </tr>
+    ${body}
+  </table>`;
+}
+function buildSheetHTML(l){
+  const row=(k,v)=>`<tr><th style="width:120px;background:#fbe9c8;border:1px solid #d9b96a;padding:8px 10px;font-size:13px;text-align:center;color:#5a4413;font-weight:700;">${k}</th><td style="border:1px solid #d9b96a;padding:8px 10px;font-size:13px;color:#111;white-space:pre-wrap;line-height:1.6;">${v||'-'}</td></tr>`;
+  const temp=[l.tmax!==''?`최고 ${l.tmax}℃`:'',l.tmin!==''?`최저 ${l.tmin}℃`:''].filter(Boolean).join('  /  ')||'-';
+  const work=[l.cin?`출근 ${l.cin}`:'',l.cout?`퇴근 ${l.cout}`:''].filter(Boolean).join('  /  ')||'-';
+  return `
+  <div style="text-align:center;margin-bottom:6px;">
+    <div style="font-size:26px;font-weight:800;letter-spacing:8px;color:#111;">공 사 일 지</div>
+    <div style="font-size:13px;color:#666;margin-top:6px;">${esc(CLIENT_NAME)}</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-top:14px;">
+    ${row('현 장 명', esc(DB.curSite))}
+    ${(()=>{const d=DB.siteInfo[DB.curSite];return (d&&d.manager)?row('현장소장', esc(d.manager)):'';})()}
+    ${(()=>{const d=DB.siteInfo[DB.curSite];return (d&&(d.start||d.special||d.end))?row('공사 기간', `착공 ${d.start||'-'}  /  특검 ${d.special||'-'}  /  준공 ${d.end||'-'}`):'';})()}
+    ${row('일      자', fmtFull(l.date))}
+    ${row('날      씨', esc(l.weather))}
+    ${row('기      온', temp)}
+    ${row('출 · 퇴근', work)}
+    ${row('투입 인원', manningTableHTML(l))}
+    ${row('금일 작업사항', esc(l.today))}
+    ${row('명일 예정사항', esc(l.tomorrow))}
+    ${row('주요 자재 / 장비', materialTableHTML(l))}
+    ${row('특 기 사 항', esc(l.note))}
+  </table>
+  ${(l.photos&&l.photos.length)?`<div style="margin-top:14px;"><div style="font-size:13px;font-weight:700;color:#5a4413;margin-bottom:6px;">📷 현장 사진</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">${l.photos.map(s=>`<img src="${s}" style="width:100%;height:130px;object-fit:cover;border:1px solid #d9b96a;border-radius:6px;">`).join('')}</div></div>`:''}
+  <div style="margin-top:18px;text-align:right;font-size:12px;color:#888;">작성: ${esc(CLIENT_NAME)} · 빌드온 자동작성</div>`;
+}
+async function makePDF(l){
+  if(typeof html2canvas==='undefined' || !window.jspdf){
+    toast('PDF 모듈 로드 실패 · 인터넷 확인');return null;
+  }
+  const sheet=$('#pdfSheet');
+  sheet.innerHTML=buildSheetHTML(l);
+  const canvas=await html2canvas(sheet,{scale:2,backgroundColor:'#ffffff'});
+  const img=canvas.toDataURL('image/jpeg',0.95);
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF('p','mm','a4');
+  const pw=210, ph=297;
+  const iw=pw-20;
+  const ih=canvas.height*iw/canvas.width;
+  pdf.addImage(img,'JPEG',10,10,iw,Math.min(ih,ph-20));
+  sheet.innerHTML='';
+  return pdf;
+}
+function pdfFileName(l){return `공사일지_${DB.curSite}_${l.date}.pdf`.replace(/[\\/:*?"<>|]/g,'_');}
+
+/* ===== 보내기 ===== */
+let sendLog=null;
+window.openSend=function(iso){
+  sendLog=DB.daylogs.find(l=>l.site===DB.curSite&&l.date===iso);
+  if(!sendLog){toast('일지를 찾을 수 없어요');return;}
+  $('#sendSub').textContent=`${fmtFull(iso)} · ${DB.curSite}`;
+  $('#sendModal').classList.add('on');
+};
+$('#sendCancel').onclick=()=>$('#sendModal').classList.remove('on');
+
+$('#sendShare').onclick=async()=>{
+  if(!sendLog)return;
+  toast('PDF 만드는 중…');
+  const pdf=await makePDF(sendLog);if(!pdf)return;
+  const blob=pdf.output('blob');
+  const file=new File([blob],pdfFileName(sendLog),{type:'application/pdf'});
+  const text=sendText(sendLog);
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file],title:'공사일지',text});
+      $('#sendModal').classList.remove('on');
+    }catch(e){ /* 사용자가 취소 */ }
+  }else{
+    // 공유 미지원(PC 등) → 다운로드 후 안내
+    dlBlob(blob,pdfFileName(sendLog));
+    toast('이 기기는 직접 공유 미지원 · PDF를 내려받았어요');
+  }
+};
+$('#sendDownload').onclick=async()=>{
+  if(!sendLog)return;
+  toast('PDF 만드는 중…');
+  const pdf=await makePDF(sendLog);if(!pdf)return;
+  pdf.save(pdfFileName(sendLog));
+  $('#sendModal').classList.remove('on');
+};
+$('#sendEmail').onclick=async()=>{
+  if(!sendLog)return;
+  // PDF는 메일에 자동첨부가 불가 → 먼저 내려받고 메일 앱 본문 자동작성
+  toast('PDF 만드는 중…');
+  const pdf=await makePDF(sendLog);if(!pdf)return;
+  pdf.save(pdfFileName(sendLog));
+  const subj=encodeURIComponent(`[공사일지] ${DB.curSite} ${sendLog.date}`);
+  const body=encodeURIComponent(sendText(sendLog)+`\n\n※ 방금 내려받은 PDF 파일(${pdfFileName(sendLog)})을 첨부해 주세요.`);
+  location.href=`mailto:?subject=${subj}&body=${body}`;
+  $('#sendModal').classList.remove('on');
+};
+$('#sendSms').onclick=()=>{
+  if(!sendLog)return;
+  const body=encodeURIComponent(sendText(sendLog));
+  location.href=`sms:?body=${body}`;
+  $('#sendModal').classList.remove('on');
+};
+function sendText(l){
+  const t=[];
+  t.push(`📄 공사일지 — ${DB.curSite}`);
+  t.push(`일자: ${fmtFull(l.date)}  날씨: ${l.weather}`);
+  if(l.tmax!==''||l.tmin!=='')t.push(`기온: ${[l.tmax!==''?'최고 '+l.tmax+'℃':'',l.tmin!==''?'최저 '+l.tmin+'℃':''].filter(Boolean).join(' / ')}`);
+  if(l.cin||l.cout)t.push(`출퇴근: ${[l.cin?'출근 '+l.cin:'',l.cout?'퇴근 '+l.cout:''].filter(Boolean).join(' / ')}`);
+  if(l.workers)t.push(`투입인원: ${l.workers}명`);
+  if(l.today)t.push(`\n[금일 작업]\n${l.today}`);
+  if(l.tomorrow)t.push(`\n[명일 예정]\n${l.tomorrow}`);
+  if(l.material)t.push(`\n[자재·장비]\n${l.material}`);
+  if(l.note)t.push(`\n[특기사항]\n${l.note}`);
+  return t.join('\n');
+}
+function dlBlob(blob,name){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
+}
+
+/* ============ 자동 공정표 (간트) ============ */
+const PH_COLORS=['#3b82f6','#f5a623','#34d399','#a78bfa','#f87171','#5fa8ff','#fb923c','#22d3ee'];
+const DAYMS=86400000;
+function isoAdd(iso,n){const p=iso.split('-');const d=new Date(+p[0],+p[1]-1,+p[2]);d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function isoDiff(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/DAYMS);} // b-a 일수
+function phEnd(p){const days=Math.max(1,parseInt(p.days)||1);return isoAdd(p.start,days-1);} // 달력일 기준 종료일
+function sitePhases(){return DB.phases.filter(p=>p.site===DB.curSite);}
+function topPhases(){return sitePhases().filter(p=>!p.parentId);}
+function subPhases(pid){return sitePhases().filter(p=>p.parentId===pid);}
+
+// 자동연동: afterId가 있는 공정은 앞 공정 종료 다음날로 start 재계산 (연쇄)
+function recomputeChain(){
+  if(!autoShiftOn())return;
+  const ps=sitePhases();
+  const byId={};ps.forEach(p=>byId[p.id]=p);
+  let changed=true,guard=0;
+  while(changed && guard<50){
+    changed=false;guard++;
+    ps.forEach(p=>{
+      if(p.afterId && byId[p.afterId]){
+        const want=isoAdd(phEnd(byId[p.afterId]),1);
+        if(p.start!==want){p.start=want;changed=true;}
+      }
+    });
+  }
+}
+function autoShiftOn(){return DB.autoShift!==false;} // 기본 ON
+
+// 전체 공정의 날짜 범위 (간트 가로축)
+function phaseRange(){
+  const ps=sitePhases();
+  if(!ps.length)return null;
+  let min=ps[0].start,max=phEnd(ps[0]);
+  ps.forEach(p=>{const e=phEnd(p);if(p.start<min)min=p.start;if(e>max)max=e;});
+  // 앞뒤 2일 여유
+  min=isoAdd(min,-1);max=isoAdd(max,1);
+  return {min,max,total:isoDiff(min,max)+1};
+}
+
+let gcalY=null, gcalM=null, gselDay=null;
+function initGcalDate(){
+  // 첫 공정 시작월로, 없으면 오늘
+  const ps=sitePhases().slice().sort((a,b)=>a.start<b.start?-1:1);
+  const base=ps.length?ps[0].start:todayISO();
+  const p=base.split('-');gcalY=+p[0];gcalM=+p[1]-1;
+}
+function renderGantt(){
+  $('#phShiftBtn').classList.toggle('on',autoShiftOn());
+  $('#phShiftBtn').textContent=autoShiftOn()?'🔗 자동연동 ON':'🔗 자동연동 OFF';
+  if(autoShiftOn()){recomputeChain();}
+  renderGanttChart();
+  if(gcalY===null)initGcalDate();
+  renderPhaseCal();
+  renderPhaseList();
+}
+
+/* 접기/펼치기 토글 */
+$$('.collapse-btn[data-toggle]').forEach(btn=>{
+  btn.onclick=()=>{
+    const body=document.getElementById(btn.dataset.toggle);
+    if(!body)return;
+    const open=body.classList.toggle('open');
+    btn.classList.toggle('open',open);
+    // 간트는 펼칠 때 가로 스크롤 재계산 위해 다시 그림
+    if(open && btn.dataset.toggle==='boxGantt')renderGanttChart();
+    if(open && btn.dataset.toggle==='boxLogList')renderLogList();
+  };
+});
+
+function renderGanttChart(){
+  const wrap=$('#ganttWrap');
+  const rng=phaseRange();
+  if(!rng){wrap.innerHTML=`<div class="gantt-empty">아직 등록된 공정이 없어요.<br><b style="color:var(--accent)">＋ 공정 추가</b>로 첫 공정을 넣어보세요.</div>`;return;}
+  const CW=22; // 하루 셀 너비(px)
+  const labelW=84;
+  const total=rng.total;
+  const today=todayISO();
+  // 헤더(일자)
+  let head=`<div class="gantt-days" style="margin-left:${labelW}px;">`;
+  for(let i=0;i<total;i++){
+    const iso=isoAdd(rng.min,i);const d=new Date(iso+'T00:00:00');const dow=d.getDay();
+    const cls=dow===0?'sun':dow===6?'sat':'';const tcls=iso===today?'today':'';
+    head+=`<div class="gd ${cls} ${tcls}" style="width:${CW}px;">${d.getDate()}</div>`;
+  }
+  head+=`</div>`;
+  // 월 표시줄
+  let months={};
+  for(let i=0;i<total;i++){const iso=isoAdd(rng.min,i);const m=iso.slice(0,7);months[m]=(months[m]||0)+1;}
+  let mhtml=`<div class="gantt-month" style="margin-left:${labelW}px;">`;
+  Object.keys(months).forEach(m=>{const mm=parseInt(m.slice(5,7));mhtml+=`<div style="width:${months[m]*CW}px;flex:0 0 auto;">${mm}월</div>`;});
+  mhtml+=`</div>`;
+  // 행 (공정 → 세부작업)
+  let rows='';
+  const mkBar=(p,sub)=>{
+    const off=isoDiff(rng.min,p.start);
+    const len=Math.max(1,parseInt(p.days)||1);
+    const left=off*CW, w=len*CW-3;
+    const color=p.color||PH_COLORS[0];
+    const label=`${p.name} ${len}일`;
+    return `<div class="gbar ${sub?'sub':''}" style="left:${left}px;width:${w}px;background:${color};" onclick="openPhase(${p.id})">${esc(label)}</div>`;
+  };
+  const trackW=total*CW;
+  const todayOff=isoDiff(rng.min,today);
+  const todayLine=(todayOff>=0&&todayOff<total)?`<div class="gantt-todayline" style="left:${labelW+todayOff*CW}px;"></div>`:'';
+  topPhases().forEach(tp=>{
+    rows+=`<div class="gantt-row">
+      <div class="gantt-rowlabel" style="width:${labelW}px;">${esc(tp.name)}</div>
+      <div class="gantt-track" style="width:${trackW}px;">${mkBar(tp,false)}</div></div>`;
+    subPhases(tp.id).forEach(sp=>{
+      rows+=`<div class="gantt-row">
+        <div class="gantt-rowlabel sub" style="width:${labelW}px;">└ ${esc(sp.name)}</div>
+        <div class="gantt-track" style="width:${trackW}px;">${mkBar(sp,true)}</div></div>`;
+    });
+  });
+  // 부모 없는 세부작업(혹시) 방어
+  wrap.innerHTML=`<div class="gantt-scroll" style="position:relative;">${mhtml}${head}${rows}${todayLine}</div>`;
+}
+
+function ddayPhase(p){
+  const today=todayISO();const s=p.start,e=phEnd(p);
+  if(today<s){const n=isoDiff(today,s);return {cls:'wait',t:`D-${n}`};}
+  if(today>e){return {cls:'done',t:'완료'};}
+  const left=isoDiff(today,e);return {cls:'run',t:`진행중 D-${left}`};
+}
+function renderPhaseList(){
+  const box=$('#phaseList');
+  const tops=topPhases();
+  const phCnt=$('#phCnt');if(phCnt)phCnt.textContent=tops.length;
+  if(!tops.length){box.innerHTML=`<div class="log-empty">등록된 공정이 없어요.</div>`;return;}
+  let h='';
+  tops.forEach(tp=>{
+    const dd=ddayPhase(tp);
+    h+=`<div class="ph-row">
+      <div class="ph-top">
+        <span class="ph-dot" style="background:${tp.color||PH_COLORS[0]};"></span>
+        <span class="ph-name">${esc(tp.name)}</span>
+        <span class="ph-dday ${dd.cls}">${dd.t}</span>
+      </div>
+      <div class="ph-period">${fmtDot(tp.start)} ~ ${fmtDot(phEnd(tp))} · ${Math.max(1,parseInt(tp.days)||1)}일${tp.afterId?' · 🔗연동':''}</div>
+      <div class="ph-btns">
+        <button onclick="openPhase(${tp.id})">✏️ 수정</button>
+        <button class="addsub" onclick="openPhase(null,${tp.id})">＋ 세부작업</button>
+      </div>`;
+    subPhases(tp.id).forEach(sp=>{
+      const sd=ddayPhase(sp);
+      h+=`<div class="ph-row sub">
+        <div class="ph-top">
+          <span class="ph-dot" style="background:${sp.color||PH_COLORS[1]};"></span>
+          <span class="ph-name">${esc(sp.name)}</span>
+          <span class="ph-dday ${sd.cls}">${sd.t}</span>
+        </div>
+        <div class="ph-period">${fmtDot(sp.start)} ~ ${fmtDot(phEnd(sp))} · ${Math.max(1,parseInt(sp.days)||1)}일${sp.afterId?' · 🔗연동':''}</div>
+        <div class="ph-btns"><button onclick="openPhase(${sp.id})">✏️ 수정</button></div>
+      </div>`;
+    });
+    h+=`</div>`;
+  });
+  box.innerHTML=h;
+}
+function fmtDot(iso){const p=iso.split('-');return `${+p[1]}.${+p[2]}`;}
+
+/* ===== 공정 캘린더 (달력형 공정표) ===== */
+function renderPhaseCal(){
+  const grid=$('#gcalGrid');if(!grid)return;
+  $('#gcalMonth').textContent=`${gcalY}년 ${gcalM+1}월`;
+  const dows=['일','월','화','수','목','금','토'];
+  let html=dows.map((d,i)=>`<div class="cal-dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
+  const first=new Date(gcalY,gcalM,1).getDay();
+  const days=new Date(gcalY,gcalM+1,0).getDate();
+  for(let i=0;i<first;i++)html+=`<div class="cal-cell empty"></div>`;
+  // 상위 공정만, 시작일 순 정렬 후 '겹치지 않으면 같은 줄 재사용' 방식으로 레인 배정
+  const phs=sitePhases().filter(p=>!p.parentId)
+    .slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(a.id-b.id));
+  const laneEnd=[]; // 각 레인이 점유 중인 마지막 종료일(iso)
+  phs.forEach(p=>{
+    const e=phEnd(p);
+    let lane=0;
+    while(lane<laneEnd.length && p.start<=laneEnd[lane])lane++;
+    laneEnd[lane]=e;
+    p._glane=lane;
+  });
+  const phOnDay=iso=>phs.filter(p=>{const e=phEnd(p);return iso>=p.start&&iso<=e;});
+  const MAXBARS=4;
+  for(let d=1;d<=days;d++){
+    const iso=`${gcalY}-${String(gcalM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow=new Date(gcalY,gcalM,d).getDay();
+    const dayPhs=phOnDay(iso);
+    const isToday=iso===todayISO();
+    let bars='';
+    for(let lane=0;lane<MAXBARS;lane++){
+      const p=dayPhs.find(x=>x._glane===lane);
+      if(!p){bars+=`<div class="cbar" style="background:transparent;"></div>`;continue;}
+      const e=phEnd(p);
+      const isStart=(iso===p.start)||dow===0;
+      const isEnd=(iso===e)||dow===6;
+      const cls=`cbar ${isStart?'s':''} ${isEnd?'e':''}`;
+      const label=(iso===p.start||dow===0)?esc(p.name):'';
+      bars+=`<div class="${cls}" style="background:${p.color||'#3b82f6'};">${label}</div>`;
+    }
+    const sel=iso===gselDay?'sel':'';
+    html+=`<div class="cal-cell gcell ${dayPhs.length?'has':''} ${isToday?'today':''} ${sel}" data-iso="${iso}">
+      <span class="dnum">${d}</span>
+      ${bars?`<div class="cal-bars">${bars}</div>`:''}
+    </div>`;
+  }
+  grid.innerHTML=html;
+  grid.querySelectorAll('.cal-cell[data-iso]').forEach(c=>c.onclick=()=>showGDay(c.dataset.iso));
+  // 세부공정표(범례): 색 + 공정명 + 기간, 탭하면 해당 월로 이동
+  const leg=$('#gcalLegend');
+  if(phs.length){
+    leg.innerHTML=phs.map(p=>`<div class="leg-item" onclick="openPhase(${p.id})">
+        <span class="sw" style="background:${p.color||'#3b82f6'};"></span>
+        <span>${esc(p.name)}</span>
+        <span class="dt">${fmtDot(p.start)}~${fmtDot(phEnd(p))}</span>
+      </div>`).join('');
+  }else{
+    leg.innerHTML=`<div style="color:var(--sub);font-size:12.5px;text-align:center;padding:10px 0;">등록된 공정이 없어요</div>`;
+  }
+  const legCnt=$('#legCnt');if(legCnt)legCnt.textContent=phs.length;
+  // 선택 상세 유지
+  if(gselDay&&gselDay.startsWith(`${gcalY}-${String(gcalM+1).padStart(2,'0')}`))showGDay(gselDay);
+  else $('#gdayDetail').innerHTML='';
+}
+function showGDay(iso){
+  gselDay=iso;
+  $$('.gcell').forEach(c=>c.classList.toggle('sel',c.dataset.iso===iso));
+  const phs=sitePhases().filter(p=>!p.parentId&&iso>=p.start&&iso<=phEnd(p));
+  const p2=iso.split('-');
+  let h=`<div class="dh">${+p2[1]}월 ${+p2[2]}일 진행 공정</div>`;
+  if(!phs.length){h+=`<div class="day-empty">이 날짜에 진행 중인 공정이 없어요</div>`;}
+  else{
+    h+=phs.map(p=>{
+      const dd=ddayPhase(p);
+      const subs=subPhases(p.id).filter(s=>iso>=s.start&&iso<=phEnd(s));
+      return `<div class="order" style="cursor:pointer;" onclick="openPhase(${p.id})">
+        <div class="order-top">
+          <div class="order-mat"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${p.color||'#3b82f6'};margin-right:5px;"></span>${esc(p.name)}<small>${fmtDot(p.start)} ~ ${fmtDot(phEnd(p))} · ${Math.max(1,parseInt(p.days)||1)}일</small></div>
+          <span class="stt ${dd.cls==='run'?'wait':dd.cls==='done'?'done':'confirmed'}">${dd.t}</span>
+        </div>
+        ${subs.length?`<div style="margin-top:7px;font-size:11.5px;color:var(--sub);">└ 세부: ${subs.map(s=>esc(s.name)).join(', ')}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  $('#gdayDetail').innerHTML=h;
+}
+$('#gcalPrev').onclick=()=>{gcalM--;if(gcalM<0){gcalM=11;gcalY--;}renderPhaseCal();};
+$('#gcalNext').onclick=()=>{gcalM++;if(gcalM>11){gcalM=0;gcalY++;}renderPhaseCal();};
+
+/* 자동연동 토글 */
+$('#phShiftBtn').onclick=()=>{
+  DB.autoShift=!autoShiftOn();
+  if(autoShiftOn())recomputeChain();
+  save();renderGantt();renderCal&&document.querySelector('#site-cal.on')&&renderCal();
+  toast(autoShiftOn()?'자동연동 켰어요 🔗':'자동연동 껐어요');
+};
+
+/* 공정 추가/수정 모달 */
+let phEditId=null, phParentId=null, phColor=PH_COLORS[0];
+$('#phAddBtn').onclick=()=>openPhase(null,null);
+window.openPhase=function(id, parentId){
+  const ps=sitePhases();
+  phEditId=id||null; phParentId=parentId||null;
+  // 색상 팔레트
+  const crow=$('#phColorRow');
+  crow.innerHTML=PH_COLORS.map(c=>`<div data-c="${c}" style="width:30px;height:30px;border-radius:8px;background:${c};cursor:pointer;border:3px solid transparent;"></div>`).join('');
+  // 앞 공정 셀렉트(자기 자신/세부 제외)
+  const sel=$('#phAfter');
+  let opts=`<option value="">— 직접 시작일 지정 —</option>`;
+  ps.filter(p=>p.id!=id).forEach(p=>{opts+=`<option value="${p.id}">${esc(p.name)} (~${fmtDot(phEnd(p))})</option>`;});
+  sel.innerHTML=opts;
+
+  if(id){
+    const p=ps.find(x=>x.id==id);if(!p)return;
+    phParentId=p.parentId||null;
+    $('#phTitle').textContent=p.parentId?'✏️ 세부작업 수정':'✏️ 공정 수정';
+    $('#phSub').textContent='내용을 고칠 수 있어요';
+    $('#phName').value=p.name;$('#phStart').value=p.start;$('#phDays').value=p.days;
+    sel.value=p.afterId||'';
+    phColor=p.color||PH_COLORS[0];
+    $('#phDelete').style.display='block';
+  }else{
+    $('#phTitle').textContent=parentId?'＋ 세부작업 등록':'📊 공정 등록';
+    $('#phSub').textContent=parentId?'상위 공정에 속한 세부작업이에요':'공정명·시작일·작업일수만 넣으면 종료일은 자동 계산돼요';
+    $('#phName').value='';
+    $('#phStart').value=selDayIso||todayISO();
+    $('#phDays').value='';
+    sel.value='';
+    phColor=parentId?PH_COLORS[1]:PH_COLORS[(topPhases().length)%PH_COLORS.length];
+    $('#phDelete').style.display='none';
+  }
+  markColor();updateEndPreview();
+  if(typeof resetPhDelBtn==='function')resetPhDelBtn();
+  $('#phModal').classList.add('on');
+};
+function markColor(){
+  $$('#phColorRow > div').forEach(d=>d.style.borderColor=(d.dataset.c===phColor)?'#fff':'transparent');
+}
+$('#phColorRow').onclick=(e)=>{const d=e.target.closest('[data-c]');if(!d)return;phColor=d.dataset.c;markColor();};
+function updateEndPreview(){
+  const start=$('#phStart').value, days=parseInt($('#phDays').value)||0;
+  const after=$('#phAfter').value;
+  let s=start;
+  if(after){const p=sitePhases().find(x=>String(x.id)===String(after));if(p)s=isoAdd(phEnd(p),1);}
+  if(!s||!days){$('#phEndPreview').textContent='종료일: -';return;}
+  const e=isoAdd(s,Math.max(1,days)-1);
+  $('#phEndPreview').textContent=`${fmtDot(s)} 시작 → ${fmtDot(e)} 종료 (${days}일)`;
+}
+$('#phStart').addEventListener('input',updateEndPreview);
+$('#phDays').addEventListener('input',updateEndPreview);
+$('#phAfter').addEventListener('change',()=>{
+  // 앞 공정 선택 시 시작일 입력칸 흐리게(자동 계산됨)
+  const after=$('#phAfter').value;
+  $('#phStart').disabled=!!after;
+  $('#phStart').style.opacity=after?'.5':'1';
+  updateEndPreview();
+});
+$('#phCancel').onclick=()=>{$('#phModal').classList.remove('on');$('#phStart').disabled=false;$('#phStart').style.opacity='1';if(typeof resetPhDelBtn==='function')resetPhDelBtn();};
+$('#phSave').onclick=()=>{
+  const name=$('#phName').value.trim();
+  const days=parseInt($('#phDays').value)||0;
+  const after=$('#phAfter').value||null;
+  let start=$('#phStart').value;
+  if(!name){toast('공정명을 입력하세요');return;}
+  if(!days||days<1){toast('작업일수를 1 이상 입력하세요');return;}
+  if(after){const p=sitePhases().find(x=>String(x.id)===String(after));if(p)start=isoAdd(phEnd(p),1);}
+  if(!start){toast('시작일을 선택하세요');return;}
+  if(phEditId){
+    const p=DB.phases.find(x=>x.id==phEditId);
+    if(p){p.name=name;p.days=days;p.start=start;p.afterId=after?Number(after):null;p.color=phColor;}
+    toast('공정을 수정했어요 ✏️');
+  }else{
+    DB.phases.push({id:Date.now(),site:DB.curSite,parentId:phParentId?Number(phParentId):null,name,start,days,afterId:after?Number(after):null,color:phColor});
+    toast(phParentId?'세부작업을 추가했어요 ＋':'공정을 등록했어요 📊');
+  }
+  if(autoShiftOn())recomputeChain();
+  save();$('#phModal').classList.remove('on');$('#phStart').disabled=false;$('#phStart').style.opacity='1';
+  renderGantt();
+};
+let phDelArmed=false, phDelTimer=null;
+function resetPhDelBtn(){
+  phDelArmed=false;
+  const b=$('#phDelete');
+  if(b){b.textContent='🗑️ 이 공정 삭제';b.style.background='';b.style.color='var(--red)';}
+  if(phDelTimer){clearTimeout(phDelTimer);phDelTimer=null;}
+}
+$('#phDelete').onclick=()=>{
+  const delId=phEditId;
+  if(delId===null||delId===undefined){toast('삭제할 공정을 찾을 수 없어요');return;}
+  // 1차 탭: 확인 상태로 무장 (confirm()이 막히는 웹뷰에서도 동작)
+  if(!phDelArmed){
+    const p=DB.phases.find(x=>x.id==delId);
+    const isTop=p&&!p.parentId;
+    const subs=isTop?subPhases(p.id):[];
+    phDelArmed=true;
+    const b=$('#phDelete');
+    b.textContent=subs.length?'⚠️ 한번 더 탭 = 하위까지 삭제':'⚠️ 한번 더 탭하면 삭제됩니다';
+    b.style.background='var(--red)';b.style.color='#fff';
+    phDelTimer=setTimeout(resetPhDelBtn,3500); // 3.5초 내 재탭 없으면 취소
+    return;
+  }
+  // 2차 탭: 실제 삭제
+  resetPhDelBtn();
+  DB.phases.forEach(x=>{if(x.afterId==delId)x.afterId=null;});
+  DB.phases=DB.phases.filter(x=>!(x.id==delId || x.parentId==delId));
+  phEditId=null;phParentId=null;
+  if(autoShiftOn())recomputeChain();
+  save();
+  $('#phModal').classList.remove('on');
+  $('#phStart').disabled=false;$('#phStart').style.opacity='1';
+  renderGantt();
+  toast('삭제했어요 🗑️');
+};
+
+/* ===== 표준공정 자동생성 (착공일 기준) ===== */
+function stdStartOf(){return (DB.stdStart&&DB.stdStart[DB.curSite])||'';}
+function hasStdGen(){return DB.schedules.some(s=>s.site===DB.curSite&&s.gen==='std');}
+$('#stdGenBtn').onclick=()=>openStd();
+function openStd(){
+  const cur=stdStartOf();
+  $('#stdStart').value=cur||todayISO();
+  $('#stdClearBtn').style.display=hasStdGen()?'block':'none';
+  updateStdPreview();
+  $('#stdModal').classList.add('on');
+}
+function updateStdPreview(){
+  const s=$('#stdStart').value;
+  if(!s){$('#stdPreview').textContent='착공일을 선택하세요';return;}
+  const last=STD_SCHEDULE[STD_SCHEDULE.length-1][0];
+  const endIso=isoAdd(s,last);
+  $('#stdPreview').innerHTML=`착공 ${fmtDot2(s)} → 준공 ${fmtDot2(endIso)}<br>총 ${last}일 · ${STD_SCHEDULE.length}개 작업`;
+}
+function fmtDot2(iso){const d=new Date(iso+'T00:00:00');return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;}
+$('#stdStart').addEventListener('input',updateStdPreview);
+$('#stdCancel').onclick=()=>$('#stdModal').classList.remove('on');
+$('#stdGenConfirm').onclick=()=>{
+  const start=$('#stdStart').value;
+  if(!start){toast('착공일을 선택하세요');return;}
+  // 기존 표준생성분 제거(직접 추가한 것은 유지)
+  DB.schedules=DB.schedules.filter(s=>!(s.site===DB.curSite&&s.gen==='std'));
+  DB.phases=DB.phases.filter(p=>!(p.site===DB.curSite&&p.gen==='std'));
+  // 같은 날짜끼리 묶기
+  const byDay={};
+  STD_SCHEDULE.forEach(([off,name])=>{const iso=isoAdd(start,off);(byDay[iso]=byDay[iso]||[]).push(name);});
+  const dayKeys=Object.keys(byDay).sort();
+  let base=Date.now();
+  // 공정(phases)만 생성 → 공정표 탭의 공정 캘린더·간트에 막대로 표시 (일반 캘린더엔 안 나옴)
+  const palette=PH_COLORS;
+  dayKeys.forEach((iso,idx)=>{
+    const next=dayKeys[idx+1];
+    const endIso=next?isoAdd(next,-1):iso;   // 다음 작업일 전날까지 (마지막은 당일)
+    const days=Math.max(1,isoDiff(iso,endIso)+1);
+    const names=byDay[iso];
+    const label=names[0]+(names.length>1?` 외 ${names.length-1}`:'');
+    DB.phases.push({
+      id:base+10000+idx, site:DB.curSite, parentId:null,
+      name:label, start:iso, days:days, afterId:null,
+      color:palette[idx%palette.length], gen:'std'
+    });
+  });
+  DB.stdStart=DB.stdStart||{};DB.stdStart[DB.curSite]=start;
+  save();
+  $('#stdModal').classList.remove('on');
+  selDayIso=start;
+  toast(`표준공정 ${dayKeys.length}개 공정을 깔았어요 📊`);
+  // 공정표 탭으로 이동해서 보여주기 (공정 캘린더 포함)
+  gcalY=null;gselDay=null;
+  goPane('site-gantt');
+  const p=start.split('-');gcalY=+p[0];gcalM=+p[1]-1;
+  renderGantt();
+};
+$('#stdClearBtn').onclick=()=>{
+  if(!confirm('자동생성된 표준공정(일정·공정)을 모두 삭제할까요? (직접 추가한 것은 유지됩니다)'))return;
+  DB.schedules=DB.schedules.filter(s=>!(s.site===DB.curSite&&s.gen==='std'));
+  DB.phases=DB.phases.filter(p=>!(p.site===DB.curSite&&p.gen==='std'));
+  if(DB.stdStart)delete DB.stdStart[DB.curSite];
+  save();$('#stdModal').classList.remove('on');renderGantt();renderCal&&renderCal();toast('표준공정을 삭제했어요 🗑️');
+};
+// 탭 이동 헬퍼
+function goPane(pane){
+  const btn=document.querySelector(`#botnav button[data-pane="${pane}"]`);
+  if(btn)btn.click();
+}
+
+/* ============ 협력업체 화면 ============ */
+let curVendorCo=null;  // 현재 선택된 협력업체명
+function vendorCompanies(){
+  // 등록된 담당자 + 기존 발주에 쓰인 회사명을 합쳐 중복 제거
+  const set=new Set();
+  DB.vendors.forEach(v=>set.add(v.company));
+  DB.orders.forEach(o=>{if(o.vendor)set.add(o.vendor);});
+  return [...set];
+}
+function renderVendorCoRow(){
+  const cos=vendorCompanies();
+  const row=$('#vendorCoRow');
+  if(cos.length===0){row.innerHTML='';curVendorCo=null;return;}
+  if(!curVendorCo||!cos.includes(curVendorCo))curVendorCo=cos[0];
+  row.innerHTML=cos.map(c=>{
+    const n=DB.orders.filter(o=>o.vendor===c&&o.status==='wait').length;
+    return `<div class="site-chip ${c===curVendorCo?'on':''}" data-co="${c}">${c}${n?` <span style="opacity:.85">(${n})</span>`:''}</div>`;
+  }).join('');
+  row.querySelectorAll('.site-chip[data-co]').forEach(c=>c.onclick=()=>{
+    curVendorCo=c.dataset.co;renderVendor();
+  });
+}
+function renderVendor(){
+  renderVendorCoRow();
+  const wrap=$('#incomingList');
+  if(!curVendorCo){wrap.innerHTML=`<div class="empty"><div class="big">🏢</div>등록된 협력업체가 없어요<br>현장 → ➕발주 → ⚙️협력업체 관리에서 추가하세요</div>`;return;}
+  // 선택한 회사로 들어온 발주 (모든 현장)
+  const list=DB.orders.filter(o=>o.vendor===curVendorCo);
+  if(list.length===0){wrap.innerHTML=`<div class="empty"><div class="big">📭</div><b>${curVendorCo}</b>(으)로 들어온 발주가 없어요</div>`;return;}
+  const ord={wait:0,confirmed:1,done:2};
+  list.sort((a,b)=>ord[a.status]-ord[b.status]);
+  wrap.innerHTML=list.map(o=>{
+    if(o.status==='wait'){
+      return `<div class="incoming" data-id="${o.id}">
+        <div class="inc-top"><span class="inc-tag">새 발주</span><span class="inc-time">${o.created}</span></div>
+        <div class="inc-mat">${o.mat}</div>
+        <div class="inc-meta">${o.site}<br><b>${o.qty.toLocaleString()}${o.unit}</b> · 희망입고 <b>${o.want}</b>${o.memo?'<br>📝 '+o.memo:''}</div>
+        <div class="inc-form">
+          <input type="date" id="dv-${o.id}" value="${o.want}">
+          <button class="btn btn-green btn-sm" style="width:auto;padding:11px 16px;" onclick="setDeliver(${o.id})">배송일 확정</button>
+        </div>
+      </div>`;
+    }else{
+      return `<div class="incoming answered">
+        <div class="inc-top"><span class="inc-tag ${o.status==='done'?'done':''}">${o.status==='done'?'입고완료':'회신완료'}</span><span class="inc-time">${o.created}</span></div>
+        <div class="inc-mat">${o.mat}</div>
+        <div class="inc-meta">${o.site} · <b>${o.qty.toLocaleString()}${o.unit}</b></div>
+        <div class="inc-answered-line">🚚 배송일 ${o.deliver} 으로 회신함 (${dday(o.deliver)})</div>
+      </div>`;
+    }
+  }).join('');
+}
+window.setDeliver=function(id){
+  const o=DB.orders.find(x=>x.id===id);if(!o)return;
+  const v=$('#dv-'+id).value;
+  if(!v){toast('배송일을 선택하세요');return;}
+  o.deliver=v;o.status='confirmed';save();
+  renderVendor();
+  toast(`✅ 배송일 ${v} 회신 · 소장 캘린더에 자동 반영됐어요`);
+};
+
+/* ============ 렌더 ============ */
+function renderSite(){renderSiteRow();renderOrders();fillVendorSelects();}
+async function boot(){
+  initCalDate();
+  if(!$('#fWant').value)$('#fWant').value=plusDays(3);
+  await initData();     // Firebase 연동 or 로컬 로드
+  renderSite();
+}
+boot();
+</script>
+</body>
+</html>
